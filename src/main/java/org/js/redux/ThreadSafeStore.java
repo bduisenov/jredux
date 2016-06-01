@@ -2,7 +2,8 @@ package org.js.redux;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Created by bduisenov on 01/06/16.
@@ -15,7 +16,7 @@ class ThreadSafeStore<S extends State, A extends Action> implements Store<S, A> 
 
     private final Queue<Listener> listeners = new ConcurrentLinkedQueue<>();
 
-    private ReentrantLock rl = new ReentrantLock(true);
+    private ReadWriteLock rwl = new ReentrantReadWriteLock(true);
 
     ThreadSafeStore(S state, Reducer<S, A> reducer) {
         this.state = state;
@@ -24,17 +25,20 @@ class ThreadSafeStore<S extends State, A extends Action> implements Store<S, A> 
 
     @Override
     public void dispatch(A action) {
-        rl.lock();
+        rwl.writeLock().lock();
         try {
             state = reducer.apply(state, action);
         } finally {
-            rl.unlock();
+            rwl.writeLock().unlock();
         }
         listeners.forEach(Listener::onStateChanged);
     }
 
     @Override
     public S getState() {
+        rwl.readLock().lock();
+        S state = this.state;
+        rwl.readLock().unlock();
         return state;
     }
 
