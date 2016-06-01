@@ -7,3 +7,8 @@ targetCompatibility = 1.8
 repositories {
     mavenCentral()
 }
+
+dependencies {
+    testCompile("org.mockito:mockito-all:1.9.5")
+    testCompile("junit:junit:4.12")
+}

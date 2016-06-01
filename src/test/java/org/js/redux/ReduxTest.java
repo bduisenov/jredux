@@ -1,6 +1,9 @@
 package org.js.redux;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import org.junit.Test;
 
@@ -43,6 +46,16 @@ public class ReduxTest {
 
         store.dispatch(TestAction.DECREMENT);
         assertEquals(0, store.getState().value);
+    }
+
+    @Test
+    public void testListeners() throws Exception {
+        Store<TestState, TestAction> store = Redux.createStore(null, TestReducer.func);
+        Listener mockedListener = mock(Listener.class);
+        store.subscribe(mockedListener);
+        store.dispatch(TestAction.INCREMENET);
+        store.dispatch(TestAction.INCREMENET);
+        verify(mockedListener, times(2)).onStateChanged();
     }
 
 }
