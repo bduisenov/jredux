@@ -14,7 +14,7 @@ public class ReduxTest {
 
     @Test
     public void testStore() throws Exception {
-        Store<TestState, TestAction> store = Redux.createStore(null, TestReducer.func);
+        Store<TestState, TestAction> store = Redux.createSimpleStore(null, TestReducer.func);
 
         store.dispatch(TestAction.INCREMENET);
         assertEquals(1, store.getState().value);
@@ -33,7 +33,7 @@ public class ReduxTest {
     public void testCombine() throws Exception {
         Reducer<TestState, TestAction> combined = Redux
                 .combineReducers(TestReducer.func, AnotherTestReducer.func);
-        Store<TestState, TestAction> store = Redux.createStore(null, combined);
+        Store<TestState, TestAction> store = Redux.createSimpleStore(null, combined);
 
         store.dispatch(TestAction.INCREMENET);
         assertEquals(2, store.getState().value);
@@ -50,7 +50,7 @@ public class ReduxTest {
 
     @Test
     public void testListeners() throws Exception {
-        Store<TestState, TestAction> store = Redux.createStore(null, TestReducer.func);
+        Store<TestState, TestAction> store = Redux.createSimpleStore(null, TestReducer.func);
         Listener mockedListener = mock(Listener.class);
         store.subscribe(mockedListener);
         store.dispatch(TestAction.INCREMENET);

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -16,34 +15,20 @@ public class Redux {
         //
     }
 
-    public static <S extends State, A extends Action> Store<S, A> createStore(S initial, Reducer<S, A> reducer) {
+    public static <S extends State, A extends Action> Store<S, A> createSimpleStore(S initial, Reducer<S, A> reducer) {
         if (reducer == null) {
             throw new NullPointerException("reducer must not be null");
         }
 
-        return new Store<S, A>() {
+        return new SimpleStore<>(initial, reducer);
+    }
 
-            private S state = initial;
+    public static <S extends State, A extends Action> Store<S, A> createConcurrentStore(S initial, Reducer<S, A> reducer) {
+        if (reducer == null) {
+            throw new NullPointerException("reducer must not be null");
+        }
 
-            private final List<Listener> listeners = new LinkedList<>();
-
-            @Override
-            public void dispatch(A action) {
-                state = reducer.apply(state, action);
-                listeners.forEach(Listener::onStateChanged);
-            }
-
-            @Override
-            public S getState() {
-                return state;
-            }
-
-            @Override
-            public Subscription subscribe(Listener listener) {
-                listeners.add(listener);
-                return () -> listeners.remove(listener);
-            }
-        };
+        return new ThreadSafeStore<>(initial, reducer);
     }
 
     public static <S extends State, A extends Action> Reducer<S, A> combineReducers(Reducer<S, A>... reducers) {
@@ -57,7 +42,8 @@ public class Redux {
     }
 
     public static <S extends State, A extends Action> Reducer<S, A> combineReducers(Collection<Reducer<S, A>> reducers) {
-        return (state, action) -> reducers.stream() //
+        List<Reducer<S, A>> rs = new ArrayList<>(reducers);
+        return (state, action) -> rs.stream() //
                 .reduce(state, (acc, reducer) -> reducer.apply(acc, action), (acc, newState) -> newState);
     }
 
