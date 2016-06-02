@@ -1,20 +1,10 @@
 package org.js.redux;
 
-import static org.js.redux.helpers.ActionCreators.addTodo;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import org.js.redux.helpers.Middleware;
-import org.js.redux.helpers.Reducers;
-import org.js.redux.helpers.TodoAction;
-import org.js.redux.helpers.Todos;
 import org.junit.Test;
 
 /**
@@ -66,31 +56,6 @@ public class ReduxTest {
         store.dispatch(TestAction.INCREMENET);
         store.dispatch(TestAction.INCREMENET);
         verify(mockedListener, times(2)).onStateChanged();
-    }
-
-    public <S extends State, A extends Action> Function<Function<Object, Void>, Function<BiFunction<Consumer<A>, Supplier<S>, Void>, Void>> test() {
-        return next -> action -> {
-            next.apply(action);
-            return null;
-        };
-    }
-
-    // wraps dispatch method with middleware once
-    @Test
-    public void applyMiddleware() {
-        Store<Todos, TodoAction> store = Redux.<Todos, TodoAction>applyMiddleware(Middleware::thunk) //
-                .apply(Redux::createStore) //
-                .apply(new Params<>(Reducers.todos()));
-
-        store.dispatch(addTodo("Use Redux"));
-        store.dispatch(addTodo("Flux FTW!"));
-
-        Todos expected = new Todos() {{
-            /*states.add(new Todos.State(1, "Use Redux"));
-            states.add(new Todos.State(2, "Flux FTW!"));*/
-        }};
-        assertEquals(expected, store.getState());
-
     }
 
 }

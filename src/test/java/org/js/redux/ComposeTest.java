@@ -31,7 +31,7 @@ public class ComposeTest {
         Function<Function<String, String>, Function<String, String>> c = next -> x -> next.apply(x + "c");
         Function<String, String> _final = x -> x;
 
-        assertEquals("abc", compose(a, b, c).apply(_final).apply(""));
+        assertEquals("abc",  compose(a, b, c).apply(_final).apply(""));
         assertEquals("bca", compose(b, c, a).apply(_final).apply(""));
         assertEquals("cab", compose(c, a, b).apply(_final).apply(""));
     }

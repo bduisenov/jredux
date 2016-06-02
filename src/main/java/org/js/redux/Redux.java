@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Created by bduisenov on 01/06/16.
@@ -78,7 +79,7 @@ public class Redux {
 
     @SafeVarargs
     public static <S extends State, A extends Action> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
-            Function<MiddlewareAPI<S, A>, Consumer<Consumer<MiddlewareAPI<S, A>>>>... middlewares) {
+            Function<MiddlewareAPI<S, A>, Function<Consumer<A>, Consumer<A>>>... middlewares) {
         if (middlewares == null) {
             throw new NullPointerException("middlewares must not be null");
         }
@@ -86,6 +87,12 @@ public class Redux {
             Store<S, A> store = createStore.apply(params);
             Consumer<A> dispatch = store::dispatch;
             MiddlewareAPI<S, A> middlewareAPI = new MiddlewareAPI<>(dispatch, store::getState);
+
+            List<Function<Consumer<A>, Consumer<A>>> chain = Arrays.asList(middlewares).stream() //
+                    .map(middleware -> middleware.apply(middlewareAPI)) //
+                    .collect(Collectors.toList());
+
+            Consumer<A> composed = compose(chain).apply(store::dispatch);
 
             return new Store<S, A>() {
 
@@ -96,7 +103,7 @@ public class Redux {
 
                 @Override
                 public void dispatch(A action) {
-                    //chain.
+                    composed.accept(action);
                 }
 
                 @Override
@@ -159,7 +166,15 @@ public class Redux {
 
     @SafeVarargs
     public static <A> Function<A, A> compose(Function<A, A>... funcs) {
-        return args -> foldRight(args, Arrays.asList(funcs));
+        return compose(Arrays.asList(funcs));
+    }
+
+    public static <A> Function<A, A> compose(List<Function<A, A>> funcs) {
+        return args -> foldRight(args, funcs);
+    }
+
+    public static <X, A> Function<X, A> compose(List<Function<A, A>> funcs, Function<X, A> func) {
+        return args -> foldRight(func.apply(args), funcs);
     }
 
     private static <A> A foldRight(A acc, List<Function<A, A>> xs) {

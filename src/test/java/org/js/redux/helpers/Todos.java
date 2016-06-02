@@ -45,7 +45,7 @@ public class Todos implements State {
         states = new State[]{};
     }
 
-    public Todos(State[] states) {
+    public Todos(State... states) {
         this.states = states;
     }
 
