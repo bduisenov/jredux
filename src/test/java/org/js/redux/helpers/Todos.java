@@ -1,8 +1,5 @@
 package org.js.redux.helpers;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.js.redux.State;
 
 /**
@@ -42,7 +39,19 @@ public class Todos implements State {
         }
     }
 
-    public final List<Todos.State> states = new ArrayList<>();
+    private final State[] states;
+
+    public Todos() {
+        states = new State[]{};
+    }
+
+    public Todos(State[] states) {
+        this.states = states;
+    }
+
+    public State[] getStates() {
+        return states;
+    }
 
     @Override
     public boolean equals(Object o) {

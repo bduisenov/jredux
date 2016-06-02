@@ -86,8 +86,8 @@ public class ReduxTest {
         store.dispatch(addTodo("Flux FTW!"));
 
         Todos expected = new Todos() {{
-            states.add(new Todos.State(1, "Use Redux"));
-            states.add(new Todos.State(2, "Flux FTW!"));
+            /*states.add(new Todos.State(1, "Use Redux"));
+            states.add(new Todos.State(2, "Flux FTW!"));*/
         }};
         assertEquals(expected, store.getState());
 
