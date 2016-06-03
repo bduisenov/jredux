@@ -1,5 +1,7 @@
 package org.js.redux.helpers;
 
+import java.util.Arrays;
+
 import org.js.redux.State;
 
 /**
@@ -9,7 +11,7 @@ public class Todos implements State {
 
     public static class State {
         public final int id;
-        public String text;
+        public final String text;
 
         public State(int id, String text) {
             this.id = id;
@@ -37,6 +39,14 @@ public class Todos implements State {
             result = 31 * result + text.hashCode();
             return result;
         }
+
+        @Override
+        public String toString() {
+            return "State{" +
+                    "id=" + id +
+                    ", text='" + text + '\'' +
+                    '}';
+        }
     }
 
     private final State[] states;
@@ -62,12 +72,19 @@ public class Todos implements State {
 
         Todos todos = (Todos) o;
 
-        return states.equals(todos.states);
+        return Arrays.deepEquals(states, todos.states);
 
     }
 
     @Override
     public int hashCode() {
-        return states.hashCode();
+        return Arrays.hashCode(states);
+    }
+
+    @Override
+    public String toString() {
+        return "Todos{" +
+                "states=" + Arrays.toString(states) +
+                '}';
     }
 }

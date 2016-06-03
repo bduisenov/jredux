@@ -5,9 +5,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.function.Supplier;
 
 /**
  * Created by bduisenov on 01/06/16.
@@ -77,22 +78,49 @@ public class Redux {
         return new ThreadSafeStore<>(preloadedState, reducer);
     }
 
-    @SafeVarargs
     public static <S extends State, A extends Action> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
-            Function<MiddlewareAPI<S, A>, Function<Consumer<A>, Consumer<A>>>... middlewares) {
-        if (middlewares == null) {
+            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Function<A, A>>> middleware1) {
+        if (middleware1 == null) {
             throw new NullPointerException("middlewares must not be null");
         }
         return createStore -> params -> {
             Store<S, A> store = createStore.apply(params);
             Consumer<A> dispatch = store::dispatch;
-            MiddlewareAPI<S, A> middlewareAPI = new MiddlewareAPI<>(dispatch, store::getState);
+            Function<A, A> composed = compose(middleware1.apply(dispatch, store::getState)).apply(store::dispatch);
+            return new Store<S, A>() {
 
-            List<Function<Consumer<A>, Consumer<A>>> chain = Arrays.asList(middlewares).stream() //
-                    .map(middleware -> middleware.apply(middlewareAPI)) //
-                    .collect(Collectors.toList());
+                @Override
+                public S getState() {
+                    return store.getState();
+                }
 
-            Consumer<A> composed = compose(chain).apply(store::dispatch);
+                @Override
+                public void dispatch(A action) {
+                    composed.apply(action);
+                }
+
+                @Override
+                public Subscription subscribe(Listener listener) {
+                    return store.subscribe(listener);
+                }
+            };
+        };
+    }
+
+    public static <S extends State, A extends Action> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
+            BiFunction<Consumer<A>, Supplier<S>, Function<Function<A, A>, Function<A, A>>> middleware1,
+            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Function<A, A>>> middleware2) {
+        if (middleware1 == null || middleware2 == null) {
+            throw new NullPointerException("middlewares must not be null");
+        }
+        return createStore -> params -> {
+            Store<S, A> store = createStore.apply(params);
+            Consumer<A> dispatch = store::dispatch;
+
+            Function<A, A> composed = compose( //
+                    middleware1.apply(dispatch, store::getState), //
+                    middleware2.apply(dispatch, store::getState) //
+            ).apply(store::dispatch);
 
             return new Store<S, A>() {
 
@@ -103,7 +131,35 @@ public class Redux {
 
                 @Override
                 public void dispatch(A action) {
-                    composed.accept(action);
+                    composed.apply(action);
+                }
+
+                @Override
+                public Subscription subscribe(Listener listener) {
+                    return store.subscribe(listener);
+                }
+            };
+        };
+    }
+
+    public static <S extends State, A extends Action> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddlewareVisitor(
+            BiFunction<Consumer<A>, Supplier<S>, Function<A, A>> compositionFunc) {
+        return createStore -> params -> {
+            Store<S, A> store = createStore.apply(params);
+            Consumer<A> dispatch = store::dispatch;
+
+            Function<A, A> composed = compositionFunc.apply(dispatch, store::getState);
+
+            return new Store<S, A>() {
+
+                @Override
+                public S getState() {
+                    return store.getState();
+                }
+
+                @Override
+                public void dispatch(A action) {
+                    composed.apply(action);
                 }
 
                 @Override
@@ -124,7 +180,7 @@ public class Redux {
      *         example, compose(f, g, h) is identical to doing (...args) => f(g(h(...args))).
      */
 
-    public static <A> Function<A, A> compose(Function<A, A> func1) {
+    public static <X, A> Function<X, A> compose(Function<X, A> func1) {
         return func1;
     }
 

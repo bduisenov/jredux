@@ -2,6 +2,9 @@ package org.js.redux;
 
 import static org.js.redux.helpers.ActionCreators.addTodo;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -19,22 +22,30 @@ import org.junit.Test;
  */
 public class ApplyMiddlewareTest {
 
-    public <S extends State, A extends Action> Function<Function<Object, Void>, Function<BiFunction<Consumer<A>, Supplier<S>, Void>, Void>> test() {
-        return next -> action -> {
-            next.apply(action);
-            return null;
-        };
+    static class test implements BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Function<TodoAction, TodoAction>, Function<TodoAction, TodoAction>>>  {
+
+        @Override
+        public Function<Function<TodoAction, TodoAction>, Function<TodoAction, TodoAction>> apply(
+                Consumer<TodoAction> todoActionConsumer, Supplier<Todos> todosSupplier) {
+            return aaFunction -> action -> {
+                todoActionConsumer.accept(action);
+                return action;
+            };
+        }
     }
 
     // wraps dispatch method with middleware once
     @Test
     public void testWrapsDispatchMethodWithMiddlewareOnce() throws Exception {
-        Store<Todos, TodoAction> store = Redux.<Todos, TodoAction>applyMiddleware(Middleware::thunk) //
+        BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Function<TodoAction, TodoAction>, Function<TodoAction, TodoAction>>> spy = spy(new test());
+        Store<Todos, TodoAction> store = Redux.applyMiddleware(spy, Middleware::thunk) //
                 .apply(Redux::createStore) //
                 .apply(new Params<>(Reducers.todos()));
 
         store.dispatch(addTodo("Use Redux"));
         store.dispatch(addTodo("Flux FTW!"));
+
+        verify(spy).apply(any(), any());
 
         Todos expected = new Todos(new Todos.State(1, "Use Redux"), new Todos.State(2, "Flux FTW!"));
         assertEquals(expected, store.getState());

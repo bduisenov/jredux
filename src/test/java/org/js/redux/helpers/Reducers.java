@@ -1,8 +1,5 @@
 package org.js.redux.helpers;
 
-import java.util.Arrays;
-import java.util.List;
-
 import org.js.redux.Reducer;
 
 /**
@@ -15,7 +12,7 @@ public class Reducers {
         for (Todos.State state : states) {
             result = state.id > result ? state.id : result;
         }
-        return result;
+        return result + 1;
     }
 
     public static <S extends Todos.State> Reducer<Todos, TodoAction> todos() {
@@ -24,9 +21,10 @@ public class Reducers {
             switch (action.type) {
                 case ADD_TODO: {
                     Todos.State[] states = todos.getStates();
-                    List<Todos.State> newStates = Arrays.asList(states);
-                    newStates.add(new Todos.State(id(states), action.text));
-                    return new Todos(newStates.toArray(new Todos.State[] {}));
+                    Todos.State[] newStates = new Todos.State[states.length + 1];
+                    System.arraycopy(states, 0, newStates, 0, states.length);
+                    newStates[newStates.length - 1] = (new Todos.State(id(states), action.text));
+                    return new Todos(newStates);
                 }
                 default: return todos;
             }
