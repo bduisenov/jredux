@@ -31,8 +31,33 @@ public class ReduxTest {
 
     @Test
     public void testCombine() throws Exception {
-        Reducer<TestState, TestAction> combined = Redux
-                .combineReducers(TestReducer.func, AnotherTestReducer.func);
+        Reducer<TestState, TestAction> combined = Redux.combineReducers( //
+                (state, action) -> {
+                    state = firstNonNull(state, new TestState(0));
+                    switch (action) {
+                        case INCREMENET: {
+                            return new TestState(state.value + 1);
+                        }
+                        case DECREMENT: {
+                            return new TestState(state.value - 1);
+                        }
+                        default:
+                            return state;
+                    }
+                }, // 
+                (state, action) -> {
+                    state = firstNonNull(state, new TestState(0));
+                    switch (action) {
+                        case INCREMENET: {
+                            return new TestState(state.value + 1);
+                        }
+                        case DECREMENT: {
+                            return new TestState(state.value - 1);
+                        }
+                        default:
+                            return state;
+                    }
+                });
         Store<TestState, TestAction> store = Redux.createStore(combined, null);
 
         store.dispatch(TestAction.INCREMENET);
@@ -56,6 +81,17 @@ public class ReduxTest {
         store.dispatch(TestAction.INCREMENET);
         store.dispatch(TestAction.INCREMENET);
         verify(mockedListener, times(2)).onStateChanged();
+    }
+
+    private static <T> T firstNonNull(T first, T second) {
+        return first != null ? first : checkNotNull(second);
+    }
+
+    private static <T> T checkNotNull(T reference) {
+        if (reference == null) {
+            throw new NullPointerException();
+        }
+        return reference;
     }
 
 }

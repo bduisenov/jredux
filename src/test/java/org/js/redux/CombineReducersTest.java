@@ -2,6 +2,7 @@ package org.js.redux;
 
 import static org.js.redux.Redux.combineReducers;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
@@ -10,39 +11,117 @@ import org.junit.Test;
  */
 public class CombineReducersTest {
 
-    static class action implements Action {
-        String type;
-        char val;
-        static action increment() {
-            return new action() {{
-                    type = "INCREMENT";
-                }};
+    @Test
+    public void testReturnsACompositeReducerThatMapsTheStateKeysToGivenReducers() throws Exception {
+        Reducer<TestState, TestAction> reducer = combineReducers( //
+                (state, action) -> {
+                    state = firstNonNull(state, new TestState(0));
+                    return action.type == Type.INCREMENT ? new TestState(state.counter + 1) : state;
+                }, //
+                (state, action) -> {
+                    state = firstNonNull(state, new TestState(0));
+                    return (action.type == Type.PUSH) ? new TestState(state.counter, action.val) : state;
+                });
+        TestState s1 = reducer.apply(new TestState(), TestAction.increment());
+        assertEquals(new TestState(1), s1);
+        TestState s2 = reducer.apply(s1, TestAction.push('a'));
+        assertEquals(new TestState(1, 'a'), s2);
+    }
+
+    @Test
+    public void testThrowsAnErrorIfAReducerReturnsUndefinedHandlingAnAction() throws Exception {
+        Reducer<TestState, TestAction> reducer = combineReducers( //
+                (state, action) -> {
+                    state = firstNonNull(state, new TestState(0));
+                    if (action.type == Type.INCREMENT) return new TestState(state.counter + 1);
+                    if (action.type == Type.DECREMENT) return new TestState(state.counter - 1);
+                    if (action.type == Type.WHATEVER || action.type == null) return null;
+                    return state;
+                });
+        try {
+            reducer.apply(new TestState(0), TestAction.whatever());
+            fail();
+        } catch (Exception e) {
+            //
         }
-        static action push(char c) {
-            return new action() {{
-                    type = "PUSH";
-                    val = c;
-                }};
+
+        try {
+            reducer.apply(new TestState(0), null);
+            fail();
+        } catch (Exception e) {
+            //
+        }
+
+        try {
+            reducer.apply(new TestState(0), TestAction.empty());
+            fail();
+        } catch (Exception e) {
+            //
+        }
+
+    }
+
+    @Test
+    public void testThrowsAnErrorOnFirstCallIfAReducerReturnsUndefinedInitializing() throws Exception {
+        Reducer<TestState, TestAction> reducer = combineReducers( //
+                (state, action) -> {
+                    if (action.type == Type.INCREMENT) return new TestState(state.counter + 1);
+                    if (action.type == Type.DECREMENT) return new TestState(state.counter - 1);
+                    return state;
+                });
+        try {
+            reducer.apply(null, null);
+            fail();
+        } catch (Exception e) {
+            //
         }
     }
 
-    static class state implements State {
+    enum Type {
+        INCREMENT, DECREMENT, WHATEVER, PUSH
+    }
+
+    static class TestAction implements Action {
+        Type type;
+        char val;
+        static TestAction empty() {
+            return new TestAction();
+        }
+        static TestAction increment() {
+            return new TestAction() {{
+                type = Type.INCREMENT;
+            }};
+        }
+        static TestAction push(char c) {
+            return new TestAction() {{
+                type = Type.PUSH;
+                val = c;
+            }};
+        }
+        static TestAction whatever() {
+            return new TestAction() {{
+                type = Type.WHATEVER;
+            }};
+        }
+    }
+
+    static class TestState implements State {
 
         final int counter;
 
         final Character stack;
 
-        state() {
+        TestState() {
             this.counter = 0;
             this.stack = null;
         }
 
-        state(int value) {
+        TestState(int value) {
             this.counter = value;
             this.stack = null;
         }
 
-        state(int value, char c) {
+        TestState(int value, char c) {
             this.counter = value;
             this.stack = c;
         }
@@ -54,7 +133,7 @@ public class CombineReducersTest {
             if (o == null || getClass() != o.getClass())
                 return false;
 
-            state state = (state) o;
+            TestState state = (TestState) o;
 
             if (counter != state.counter)
                 return false;
@@ -68,23 +147,6 @@ public class CombineReducersTest {
             result = 31 * result + (stack != null ? stack.hashCode() : 0);
             return result;
         }
-    }
-
-    @Test
-    public void testReturnsACompositeReducerThatMapsTheStateKeysToGivenReducers() throws Exception {
-        Reducer<state, action> reducer = combineReducers( //
-                (state, action) -> {
-                    int value = firstNonNull(state, new state(0)).counter;
-                    return action.type.equals("INCREMENT") ? new state(value + 1) : state;
-                }, //
-                (state, action) -> {
-                    int value = firstNonNull(state, new state(0)).counter;
-                    return (action.type.equals("PUSH")) ? new state(value, action.val) : state;
-                });
-        state s1 = reducer.apply(new state(), action.increment());
-        assertEquals(new state(1), s1);
-        state s2 = reducer.apply(s1, action.push('a'));
-        assertEquals(new state(1, 'a'), s2);
     }
 
     private static <T> T firstNonNull(T first, T second) {

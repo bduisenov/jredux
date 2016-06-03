@@ -11,10 +11,19 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.js.redux.utils.TypeResolver;
+
 /**
  * Created by bduisenov on 01/06/16.
  */
 public class Redux {
+
+    private static String undefinedStateErrorMessage = "Given action %s, reducer %s returned undefined. "
+            + "To ignore an action, you must explicitly return the previous state.";
+
+    private static String undefinedInitialState = "Reducer %s returned undefined during initialization. "
+            + "If the state passed to the reducer is undefined, you must "
+            + "explicitly return the initial state. The initial state may " + "not be undefined";
 
     private Redux() {
         //
@@ -193,32 +202,42 @@ public class Redux {
         return args -> foldRight(func3.apply(args), Arrays.asList(func1, func2));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3, Function<X, A> func4) {
+    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
+            Function<X, A> func4) {
         return args -> foldRight(func4.apply(args), Arrays.asList(func1, func2, func3));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3, Function<A, A> func4, Function<X, A> func5) {
+    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
+            Function<A, A> func4, Function<X, A> func5) {
         return args -> foldRight(func5.apply(args), Arrays.asList(func1, func2, func3, func4));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3, Function<A, A> func4, Function<A, A> func5, Function<X, A> func6) {
+    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
+            Function<A, A> func4, Function<A, A> func5, Function<X, A> func6) {
         return args -> foldRight(func6.apply(args), Arrays.asList(func1, func2, func3, func4, func5));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3, Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<X, A> func7) {
+    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
+            Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<X, A> func7) {
         return args -> foldRight(func7.apply(args), Arrays.asList(func1, func2, func3, func4, func5, func6));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3, Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<A, A> func7, Function<X, A> func8) {
+    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
+            Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<A, A> func7, Function<X, A> func8) {
         return args -> foldRight(func8.apply(args), Arrays.asList(func1, func2, func3, func4, func5, func6, func7));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3, Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<A, A> func7, Function<A, A> func8, Function<X, A> func9) {
+    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
+            Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<A, A> func7, Function<A, A> func8,
+            Function<X, A> func9) {
         return args -> foldRight(func9.apply(args), Arrays.asList(func1, func2, func3, func4, func5, func6, func7, func8));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3, Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<A, A> func7, Function<A, A> func8, Function<A, A> func9, Function<X, A> func10) {
-        return args -> foldRight(func10.apply(args), Arrays.asList(func1, func2, func3, func4, func5, func6, func7, func8, func9));
+    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
+            Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<A, A> func7, Function<A, A> func8,
+            Function<A, A> func9, Function<X, A> func10) {
+        return args -> foldRight(func10.apply(args),
+                Arrays.asList(func1, func2, func3, func4, func5, func6, func7, func8, func9));
     }
 
     @SafeVarargs
@@ -267,8 +286,64 @@ public class Redux {
 
     public static <S extends State, A extends Action> Reducer<S, A> combineReducers(Collection<Reducer<S, A>> reducers) {
         List<Reducer<S, A>> rs = new ArrayList<>(reducers);
-        return (state, action) -> rs.stream() //
-                .reduce(state, (acc, reducer) -> reducer.apply(acc, action), (acc, newState) -> newState);
+        RuntimeException sanityError = assertReducerSanity(rs);
+        return (state, action) -> {
+            if (sanityError != null) {
+                throw sanityError;
+            }
+            return rs.stream() //
+                    .reduce(state, //
+                            (acc, reducer) -> checkReducerResult(reducer.apply(acc, action),
+                                    String.format(undefinedStateErrorMessage, action, acc)), //
+                            (acc, newState) -> newState);
+        };
+    }
+
+    private static <S extends State, A extends Action> IllegalStateException assertReducerSanity(
+            List<Reducer<S, A>> reducers) {
+        for (Reducer<S, A> reducer : reducers) {
+            S initialState = reducer.apply(null, getInitAction(reducer));
+            if (initialState == null) {
+                return new IllegalStateException(String.format(undefinedInitialState, reducer));
+            }
+        }
+        return null;
+    }
+
+    private static <S extends State, A extends Action> A getInitAction(Reducer<S, A> reducer) {
+        Class<?>[] typeArgs = TypeResolver.resolveRawArguments(Reducer.class, reducer.getClass());
+        Class<?> actionType = typeArgs[1];
+        if (actionType.isEnum()) {
+            for (A action : (A[]) actionType.getEnumConstants()) {
+                try {
+                    return (A) action.getClass().getMethod("valueOf", String.class).invoke(null, "INIT");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            return null;
+        } else {
+            try {
+                return (A) actionType.newInstance();
+            } catch (Exception e) {
+                // is enum is used as Action
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private static <T> T checkNotNull(T reference, String message) {
+        if (reference == null) {
+            throw new NullPointerException(message);
+        }
+        return reference;
+    }
+
+    private static <T> T checkReducerResult(T reference, String message) {
+        if (reference == null) {
+            throw new IllegalStateException(message);
+        }
+        return reference;
     }
 
 }

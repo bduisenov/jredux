@@ -9,13 +9,13 @@ public enum TestReducer implements Reducer<TestState, TestAction> {
 
     @Override
     public TestState apply(TestState state, TestAction action) {
-        int value = firstNonNull(state, new TestState(0)).getValue();
+        state = firstNonNull(state, new TestState(0));
         switch (action) {
             case INCREMENET: {
-                return new TestState(value + 1);
+                return new TestState(state.value + 1);
             }
             case DECREMENT: {
-                return new TestState(value - 1);
+                return new TestState(state.value - 1);
             }
             default: return state;
         }
