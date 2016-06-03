@@ -4,6 +4,8 @@ import static org.js.redux.Redux.combineReducers;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.util.Collections;
+
 import org.junit.Test;
 
 /**
@@ -83,6 +85,12 @@ public class CombineReducersTest {
                 (state, action) -> {
                     throw new UnsupportedOperationException("Error thrown in reducer");
                 });
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testWarnsIfNoReducersArePassedToCombineReducers() throws Exception {
+        Reducer<TestState, TestAction> reducer = combineReducers(Collections.emptyList());
+        reducer.apply(null, null);
     }
 
     enum Type {

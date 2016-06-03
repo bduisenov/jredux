@@ -21,9 +21,12 @@ public class Redux {
     private static String undefinedStateErrorMessage = "Given action %s, reducer %s returned undefined. "
             + "To ignore an action, you must explicitly return the previous state.";
 
-    private static String undefinedInitialState = "Reducer %s returned undefined during initialization. "
+    private static String undefinedInitialStateMessage = "Reducer %s returned undefined during initialization. "
             + "If the state passed to the reducer is undefined, you must "
             + "explicitly return the initial state. The initial state may " + "not be undefined";
+
+    private static String unexpectedStateShapeWarningMessage = "Store does not have a valid reducer. Make sure "
+            + "the argument passed  to combineReducers is an object whose values are reducers.";
 
     private Redux() {
         //
@@ -287,10 +290,10 @@ public class Redux {
     public static <S extends State, A extends Action> Reducer<S, A> combineReducers(Collection<Reducer<S, A>> reducers) {
         List<Reducer<S, A>> rs = new ArrayList<>(reducers);
         RuntimeException sanityError = assertReducerSanity(rs);
+        RuntimeException errorMessage = (reducers.isEmpty()) ? new IllegalStateException(unexpectedStateShapeWarningMessage) : null;
         return (state, action) -> {
-            if (sanityError != null) {
-                throw sanityError;
-            }
+            throwIfPresent(sanityError);
+            throwIfPresent(errorMessage);
             return rs.stream() //
                     .reduce(state, //
                             (acc, reducer) -> checkReducerResult(reducer.apply(acc, action),
@@ -304,7 +307,7 @@ public class Redux {
         for (Reducer<S, A> reducer : reducers) {
             S initialState = reducer.apply(null, getInitAction(reducer));
             if (initialState == null) {
-                return new IllegalStateException(String.format(undefinedInitialState, reducer));
+                return new IllegalStateException(String.format(undefinedInitialStateMessage, reducer));
             }
         }
         return null;
@@ -343,6 +346,12 @@ public class Redux {
             throw new IllegalStateException(message);
         }
         return reference;
+    }
+
+    private static void throwIfPresent(Exception e) {
+        if (e != null) {
+            doThrow(e);
+        }
     }
 
     private static void doThrow(Exception e) {
