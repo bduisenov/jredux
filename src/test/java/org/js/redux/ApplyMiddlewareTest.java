@@ -22,14 +22,14 @@ import org.junit.Test;
  */
 public class ApplyMiddlewareTest {
 
-    static class test implements BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Function<TodoAction, TodoAction>, Function<TodoAction, TodoAction>>>  {
+    static class test implements BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Consumer<TodoAction>, Consumer<TodoAction>>>  {
 
         @Override
-        public Function<Function<TodoAction, TodoAction>, Function<TodoAction, TodoAction>> apply(
+        public Function<Consumer<TodoAction>, Consumer<TodoAction>> apply(
                 Consumer<TodoAction> todoActionConsumer, Supplier<Todos> todosSupplier) {
-            return aaFunction -> action -> {
-                todoActionConsumer.accept(action);
-                return action;
+            return next -> action ->{
+                System.out.println("test");
+                next.accept(action);
             };
         }
     }
@@ -37,8 +37,8 @@ public class ApplyMiddlewareTest {
     // wraps dispatch method with middleware once
     @Test
     public void testWrapsDispatchMethodWithMiddlewareOnce() throws Exception {
-        BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Function<TodoAction, TodoAction>, Function<TodoAction, TodoAction>>> spy = spy(new test());
-        Store<Todos, TodoAction> store = Redux.applyMiddleware(spy, Middleware::thunk) //
+        BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Consumer<TodoAction>, Consumer<TodoAction>>> spy = spy(new test());
+        Store<Todos, TodoAction> store = Redux.<Todos, TodoAction, TodoAction>applyMiddleware(spy, Middleware::thunk) //
                 .apply(Redux::createStore) //
                 .apply(new Params<>(Reducers.todos()));
 

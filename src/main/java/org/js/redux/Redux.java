@@ -79,14 +79,14 @@ public class Redux {
     }
 
     public static <S extends State, A extends Action> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
-            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Function<A, A>>> middleware1) {
+            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware1) {
         if (middleware1 == null) {
             throw new NullPointerException("middlewares must not be null");
         }
         return createStore -> params -> {
             Store<S, A> store = createStore.apply(params);
             Consumer<A> dispatch = store::dispatch;
-            Function<A, A> composed = compose(middleware1.apply(dispatch, store::getState)).apply(store::dispatch);
+            Consumer<A> composed = compose(middleware1.apply(dispatch, store::getState)).apply(store::dispatch);
             return new Store<S, A>() {
 
                 @Override
@@ -96,7 +96,7 @@ public class Redux {
 
                 @Override
                 public void dispatch(A action) {
-                    composed.apply(action);
+                    composed.accept(action);
                 }
 
                 @Override
@@ -107,9 +107,9 @@ public class Redux {
         };
     }
 
-    public static <S extends State, A extends Action> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
-            BiFunction<Consumer<A>, Supplier<S>, Function<Function<A, A>, Function<A, A>>> middleware1,
-            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Function<A, A>>> middleware2) {
+    public static <S extends State, A extends Action, X> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
+            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware1,
+            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<X>, Consumer<A>>> middleware2) {
         if (middleware1 == null || middleware2 == null) {
             throw new NullPointerException("middlewares must not be null");
         }
@@ -117,10 +117,10 @@ public class Redux {
             Store<S, A> store = createStore.apply(params);
             Consumer<A> dispatch = store::dispatch;
 
-            Function<A, A> composed = compose( //
+            Consumer<A> composed = compose( //
                     middleware1.apply(dispatch, store::getState), //
                     middleware2.apply(dispatch, store::getState) //
-            ).apply(store::dispatch);
+            ).apply(x -> dispatch.accept((A)x));
 
             return new Store<S, A>() {
 
@@ -131,7 +131,7 @@ public class Redux {
 
                 @Override
                 public void dispatch(A action) {
-                    composed.apply(action);
+                    composed.accept(action);
                 }
 
                 @Override
