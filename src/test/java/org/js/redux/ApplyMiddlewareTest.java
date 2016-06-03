@@ -22,6 +22,7 @@ import org.junit.Test;
 public class ApplyMiddlewareTest {
 
     boolean reachable = false;
+    int reachedCnt = 0;
 
     @Test
     public void testWrapsDispatchMethodWithMiddlewareOnce() throws Exception {
@@ -43,12 +44,13 @@ public class ApplyMiddlewareTest {
     @Test
     public void testPassesRecursiveDispatchesThroughTheMiddlewareChain () throws Exception {
         BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Consumer<TodoAction>, Consumer<TodoAction>>> spy =
-                (dispatch, getState) -> next -> action -> { next.accept(action); reachable = true; };
+                (dispatch, getState) -> next -> action -> { next.accept(action); ++reachedCnt; };
         Store<Todos, TodoAction> store = Redux.<Todos, TodoAction, TodoAction>applyMiddleware(spy, Middleware::thunk) //
                 .apply(Redux::createStore) //
                 .apply(new Params<>(Reducers.todos()));
 
         store.dispatch(addTodoAsync("Use Redux"));
+        assertEquals(2, reachedCnt);
     }
 
 }

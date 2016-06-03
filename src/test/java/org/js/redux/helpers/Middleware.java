@@ -1,6 +1,7 @@
 package org.js.redux.helpers;
 
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -20,23 +21,11 @@ public class Middleware {
     public static <S extends State, A extends Action, X> Function<Consumer<X>, Consumer<A>> thunk(Consumer<A> dispatch, Supplier<S> getState) {
         return next -> action -> {
             if (action instanceof BiConsumer) ((BiConsumer)action).accept(dispatch, getState);
+            if (action instanceof BiFunction) ((BiFunction)action).apply(dispatch, getState);
+            if (action instanceof Consumer) ((Consumer)action).accept(dispatch);
+            if (action instanceof Function) ((Function)action).apply(dispatch);
             else next.accept((X)action);
         };
-    }
-
-    public static void main(String[] args) {
-        Function<Consumer<Action>, Consumer<Action>> thunk = thunk(action -> System.out.println("action"), () -> null);
-        Consumer<Action> next = thunk.apply(action -> {
-            System.out.println(action);
-        });
-        next.accept(new Action() {
-
-            @Override
-            public String toString() {
-                return "action";
-            }
-        });
-
     }
 
 }

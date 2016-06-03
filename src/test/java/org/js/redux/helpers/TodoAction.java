@@ -7,9 +7,12 @@ import org.js.redux.Action;
  */
 public class TodoAction implements Action {
 
-    public final ActionTypes type;
+    public ActionTypes type;
 
-    public final String text;
+    public String text;
+
+    public TodoAction() {
+    }
 
     public TodoAction(ActionTypes type, String text) {
         this.type = type;

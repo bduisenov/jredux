@@ -1,9 +1,9 @@
 package org.js.redux.helpers;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Created by bduisenov on 02/06/16.
@@ -14,9 +14,30 @@ public class ActionCreators {
         return new TodoAction(ActionTypes.ADD_TODO, text);
     }
 
-    public static Function<Consumer<TodoAction>, Future<Void>> addTodoAsync(String text) {
-        return dispatch -> CompletableFuture.completedFuture(text) //
-                .thenAccept(text1 -> dispatch.accept(addTodo(text1)));
+    static class todoAsync extends TodoAction implements Consumer<Consumer<TodoAction>> {
+
+        todoAsync(String text) {
+            this.text = text;
+        }
+
+        @Override
+        public void accept(Consumer<TodoAction> dispatch) {
+            CompletableFuture.completedFuture(text) //
+                    .thenAccept(text1 -> dispatch.accept(addTodo(text1)));
+        }
     }
 
+    // (dispatch) => Promise => resolve => dispatch(addTodo(text))
+    public static TodoAction addTodoAsync(String text) {
+        return new todoAsync(text);
+    }
+
+    // (dispatch, getState) => dispatch(addTodo)
+    public static BiConsumer<Consumer<TodoAction>, Supplier<Todos>> addTodoIfEmpty(String text) {
+        return (dispatch, getState) -> {
+            if (getState.get() == null) {
+                dispatch.accept(addTodo(text));
+            }
+        };
+    }
 }

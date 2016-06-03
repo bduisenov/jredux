@@ -82,15 +82,6 @@ public class Redux {
         return new SimpleStore<>(preloadedState, reducer);
     }
 
-    public static <S extends State, A extends Action> Store<S, A> createConcurrentStore(Reducer<S, A> reducer,
-            S preloadedState) {
-        if (reducer == null) {
-            throw new NullPointerException("reducer must not be null");
-        }
-
-        return new ThreadSafeStore<>(preloadedState, reducer);
-    }
-
     public static <S extends State, A extends Action> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
             BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware1) {
         if (middleware1 == null) {
@@ -128,13 +119,6 @@ public class Redux {
         }
         return createStore -> params -> {
             Store<S, A> store = createStore.apply(params);
-            Consumer<A> dispatch = store::dispatch;
-
-            Consumer<A> composed = compose( //
-                    middleware1.apply(dispatch, store::getState), //
-                    middleware2.apply(dispatch, store::getState) //
-            ).apply(dispatch);
-
             return new Store<S, A>() {
 
                 @Override
@@ -142,37 +126,17 @@ public class Redux {
                     return store.getState();
                 }
 
+                Consumer<A> composed;
+
                 @Override
                 public void dispatch(A action) {
+                    if (composed == null) {
+                        composed = compose( //
+                                middleware1.apply(this::dispatch, store::getState), //
+                                middleware2.apply(this::dispatch, store::getState)) //
+                                        .apply(store::dispatch);
+                    }
                     composed.accept(action);
-                }
-
-                @Override
-                public Subscription subscribe(Listener listener) {
-                    return store.subscribe(listener);
-                }
-            };
-        };
-    }
-
-    public static <S extends State, A extends Action> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddlewareVisitor(
-            BiFunction<Consumer<A>, Supplier<S>, Function<A, A>> compositionFunc) {
-        return createStore -> params -> {
-            Store<S, A> store = createStore.apply(params);
-            Consumer<A> dispatch = store::dispatch;
-
-            Function<A, A> composed = compositionFunc.apply(dispatch, store::getState);
-
-            return new Store<S, A>() {
-
-                @Override
-                public S getState() {
-                    return store.getState();
-                }
-
-                @Override
-                public void dispatch(A action) {
-                    composed.apply(action);
                 }
 
                 @Override
@@ -290,7 +254,8 @@ public class Redux {
     public static <S extends State, A extends Action> Reducer<S, A> combineReducers(Collection<Reducer<S, A>> reducers) {
         List<Reducer<S, A>> rs = new ArrayList<>(reducers);
         RuntimeException sanityError = assertReducerSanity(rs);
-        RuntimeException errorMessage = (reducers.isEmpty()) ? new IllegalStateException(unexpectedStateShapeWarningMessage) : null;
+        RuntimeException errorMessage = (reducers.isEmpty()) ? new IllegalStateException(unexpectedStateShapeWarningMessage)
+                : null;
         return (state, action) -> {
             throwIfPresent(sanityError);
             throwIfPresent(errorMessage);
