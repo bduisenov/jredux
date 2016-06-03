@@ -321,15 +321,14 @@ public class Redux {
                     e.printStackTrace();
                 }
             }
-            return null;
         } else {
             try {
                 return (A) actionType.newInstance();
             } catch (Exception e) {
-                // is enum is used as Action
-                throw new RuntimeException(e);
+                doThrow(e);
             }
         }
+        return null;
     }
 
     private static <T> T checkNotNull(T reference, String message) {
@@ -344,6 +343,15 @@ public class Redux {
             throw new IllegalStateException(message);
         }
         return reference;
+    }
+
+    private static void doThrow(Exception e) {
+        Redux.<RuntimeException>doThrow0(e);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Exception> void doThrow0(Exception e) throws E {
+        throw (E) e;
     }
 
 }

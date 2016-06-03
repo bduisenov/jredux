@@ -77,9 +77,12 @@ public class CombineReducersTest {
         }
     }
 
-    @Test
+    @Test(expected = UnsupportedOperationException.class)
     public void testCatchesErrorThrownInReducerWhenInitializingAndRethrow() throws Exception {
-
+        Reducer<TestState, TestAction> reducer = combineReducers( //
+                (state, action) -> {
+                    throw new UnsupportedOperationException("Error thrown in reducer");
+                });
     }
 
     enum Type {
