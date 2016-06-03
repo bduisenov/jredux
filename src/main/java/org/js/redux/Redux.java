@@ -82,15 +82,13 @@ public class Redux {
         return new SimpleStore<>(preloadedState, reducer);
     }
 
-    public static <S extends State, A extends Action> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
+    public static <S extends State, A extends Action, X> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
             BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware1) {
         if (middleware1 == null) {
             throw new NullPointerException("middlewares must not be null");
         }
         return createStore -> params -> {
             Store<S, A> store = createStore.apply(params);
-            Consumer<A> dispatch = store::dispatch;
-            Consumer<A> composed = compose(middleware1.apply(dispatch, store::getState)).apply(store::dispatch);
             return new Store<S, A>() {
 
                 @Override
@@ -98,8 +96,15 @@ public class Redux {
                     return store.getState();
                 }
 
+                Consumer<A> composed;
+
                 @Override
                 public void dispatch(A action) {
+                    if (composed == null) {
+                        composed = compose( //
+                                middleware1.apply(this::dispatch, store::getState)) //
+                                .apply(store::dispatch);
+                    }
                     composed.accept(action);
                 }
 

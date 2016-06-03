@@ -32,12 +32,22 @@ public class ActionCreators {
         return new todoAsync(text);
     }
 
-    // (dispatch, getState) => dispatch(addTodo)
-    public static BiConsumer<Consumer<TodoAction>, Supplier<Todos>> addTodoIfEmpty(String text) {
-        return (dispatch, getState) -> {
+    static class todoIfEmpty extends TodoAction implements BiConsumer<Consumer<TodoAction>, Supplier<Todos>> {
+
+        todoIfEmpty(String text) {
+            this.text = text;
+        }
+
+        @Override
+        public void accept(Consumer<TodoAction> dispatch, Supplier<Todos> getState) {
             if (getState.get() == null) {
                 dispatch.accept(addTodo(text));
             }
-        };
+        }
+    }
+
+    // (dispatch, getState) => dispatch(addTodo)
+    public static todoIfEmpty addTodoIfEmpty(String text) {
+        return new todoIfEmpty(text);
     }
 }

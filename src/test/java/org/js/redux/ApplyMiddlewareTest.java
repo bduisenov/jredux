@@ -2,6 +2,7 @@ package org.js.redux;
 
 import static org.js.redux.helpers.ActionCreators.addTodo;
 import static org.js.redux.helpers.ActionCreators.addTodoAsync;
+import static org.js.redux.helpers.ActionCreators.addTodoIfEmpty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -51,6 +52,24 @@ public class ApplyMiddlewareTest {
 
         store.dispatch(addTodoAsync("Use Redux"));
         assertEquals(2, reachedCnt);
+    }
+
+    @Test
+    public void testWorksWithThunkMiddleware() throws Exception {
+        Store<Todos, TodoAction> store = Redux.<Todos, TodoAction, TodoAction>applyMiddleware(Middleware::thunk) //
+                .apply(Redux::createStore) //
+                .apply(new Params<>(Reducers.todos()));
+        store.dispatch(addTodoIfEmpty("Hello"));
+        assertEquals(new Todos(new Todos.State(1, "Hello")), store.getState());
+
+        store.dispatch(addTodoIfEmpty("Hello"));
+        assertEquals(new Todos(new Todos.State(1, "Hello")), store.getState());
+
+        store.dispatch(addTodo("World"));
+        assertEquals(new Todos(new Todos.State(1, "Hello"), new Todos.State(2, "World")), store.getState());
+
+        store.dispatch(addTodoAsync("Maybe"));
+        assertEquals(new Todos(new Todos.State(1, "Hello"), new Todos.State(2, "World"), new Todos.State(3, "Maybe")), store.getState());
     }
 
 }
