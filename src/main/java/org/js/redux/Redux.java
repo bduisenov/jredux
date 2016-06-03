@@ -3,6 +3,7 @@ package org.js.redux;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -109,7 +110,7 @@ public class Redux {
 
     public static <S extends State, A extends Action, X> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
             BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware1,
-            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<X>, Consumer<A>>> middleware2) {
+            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware2) {
         if (middleware1 == null || middleware2 == null) {
             throw new NullPointerException("middlewares must not be null");
         }
@@ -120,7 +121,7 @@ public class Redux {
             Consumer<A> composed = compose( //
                     middleware1.apply(dispatch, store::getState), //
                     middleware2.apply(dispatch, store::getState) //
-            ).apply(x -> dispatch.accept((A)x));
+            ).apply(dispatch);
 
             return new Store<S, A>() {
 
@@ -185,7 +186,7 @@ public class Redux {
     }
 
     public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<X, A> func2) {
-        return args -> foldRight(func2.apply(args), Arrays.asList(func1));
+        return args -> foldRight(func2.apply(args), Collections.singletonList(func1));
     }
 
     public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<X, A> func3) {
@@ -253,6 +254,7 @@ public class Redux {
         }
     }
 
+    @SafeVarargs
     public static <S extends State, A extends Action> Reducer<S, A> combineReducers(Reducer<S, A>... reducers) {
         return combineReducers(Arrays.asList(reducers));
     }

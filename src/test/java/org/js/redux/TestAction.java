@@ -5,6 +5,6 @@ package org.js.redux;
  */
 public enum TestAction implements Action {
 
-    INCREMENET, DECREMENT
+    INCREMENET, DECREMENT, PUSH
 
 }

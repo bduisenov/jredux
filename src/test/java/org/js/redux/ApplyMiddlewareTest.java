@@ -25,16 +25,11 @@ public class ApplyMiddlewareTest {
     static class test implements BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Consumer<TodoAction>, Consumer<TodoAction>>>  {
 
         @Override
-        public Function<Consumer<TodoAction>, Consumer<TodoAction>> apply(
-                Consumer<TodoAction> todoActionConsumer, Supplier<Todos> todosSupplier) {
-            return next -> action ->{
-                System.out.println("test");
-                next.accept(action);
-            };
+        public Function<Consumer<TodoAction>, Consumer<TodoAction>> apply(Consumer<TodoAction> dispatcher, Supplier<Todos> getState) {
+            return next -> next::accept;
         }
     }
 
-    // wraps dispatch method with middleware once
     @Test
     public void testWrapsDispatchMethodWithMiddlewareOnce() throws Exception {
         BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Consumer<TodoAction>, Consumer<TodoAction>>> spy = spy(new test());
