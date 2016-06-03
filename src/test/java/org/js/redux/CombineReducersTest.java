@@ -77,6 +77,11 @@ public class CombineReducersTest {
         }
     }
 
+    @Test
+    public void testCatchesErrorThrownInReducerWhenInitializingAndRethrow() throws Exception {
+
+    }
+
     enum Type {
         INCREMENT, DECREMENT, WHATEVER, PUSH
     }

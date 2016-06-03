@@ -14,7 +14,20 @@ public class ReduxTest {
 
     @Test
     public void testStore() throws Exception {
-        Store<TestState, TestAction> store = Redux.createStore(TestReducer.func, null);
+        Store<TestState, TestAction> store = Redux.createStore( //
+                (state, action) -> {
+                    state = firstNonNull(state, new TestState(0));
+                    switch (action) {
+                        case INCREMENET: {
+                            return new TestState(state.value + 1);
+                        }
+                        case DECREMENT: {
+                            return new TestState(state.value - 1);
+                        }
+                        default:
+                            return state;
+                    }
+                }, null);
 
         store.dispatch(TestAction.INCREMENET);
         assertEquals(1, store.getState().value);
@@ -75,12 +88,39 @@ public class ReduxTest {
 
     @Test
     public void testListeners() throws Exception {
-        Store<TestState, TestAction> store = Redux.createStore(TestReducer.func, null);
+        Store<TestState, TestAction> store = Redux.createStore( //
+                (state, action) -> {
+                    state = firstNonNull(state, new TestState(0));
+                    switch (action) {
+                        case INCREMENET: {
+                            return new TestState(state.value + 1);
+                        }
+                        case DECREMENT: {
+                            return new TestState(state.value - 1);
+                        }
+                        default:
+                            return state;
+                    }
+                }, null);
         Listener mockedListener = mock(Listener.class);
         store.subscribe(mockedListener);
         store.dispatch(TestAction.INCREMENET);
         store.dispatch(TestAction.INCREMENET);
         verify(mockedListener, times(2)).onStateChanged();
+    }
+
+    enum TestAction implements Action {
+        INIT, INCREMENET, DECREMENT, PUSH
+    }
+
+    class TestState implements State {
+        public final int value;
+        public TestState(int value) {
+            this.value = value;
+        }
+        public int getValue() {
+            return value;
+        }
     }
 
     private static <T> T firstNonNull(T first, T second) {
