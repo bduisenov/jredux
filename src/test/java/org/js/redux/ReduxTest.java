@@ -27,7 +27,7 @@ public class ReduxTest {
                         default:
                             return state;
                     }
-                }, null);
+                }, (TestState)null);
 
         store.dispatch(TestAction.INCREMENET);
         assertEquals(1, store.getState().value);
@@ -71,7 +71,7 @@ public class ReduxTest {
                             return state;
                     }
                 });
-        Store<TestState, TestAction> store = Redux.createStore(combined, null);
+        Store<TestState, TestAction> store = Redux.createStore(combined, (TestState)null);
 
         store.dispatch(TestAction.INCREMENET);
         assertEquals(2, store.getState().value);
@@ -101,7 +101,7 @@ public class ReduxTest {
                         default:
                             return state;
                     }
-                }, null);
+                }, (TestState)null);
         Listener mockedListener = mock(Listener.class);
         store.subscribe(mockedListener);
         store.dispatch(TestAction.INCREMENET);

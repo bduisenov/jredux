@@ -15,7 +15,7 @@ public class Reducers {
         return result + 1;
     }
 
-    public static <S extends Todos.State> Reducer<Todos, TodoAction> todos() {
+    public static Reducer<Todos, TodoAction> todos() {
         return (todos, action) -> {
             todos = firstNonNull(todos, new Todos());
             if (action.type == null) return todos;

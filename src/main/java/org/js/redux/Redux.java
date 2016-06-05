@@ -32,10 +32,14 @@ public class Redux {
         //
     }
 
-    public static <S extends State, A extends Action> Store<S, A> createStore(Params<S, A> params) {
-        return createStore(params.reducer, params.preloadedState, params.enhancer);
-    }
+    /*public static <S extends State, A extends Action> Store<S, A> createStore(S state, A action) {
+        return createStore(params.reducer, params.preloadedState);
+    }*/
 
+    public static <S extends State, A extends Action> Store<S, A> createStore(Reducer<S, A> reducer) {
+        return createStore(reducer, null, null);
+    }
+    
     /**
      * 
      * @param reducer
@@ -51,6 +55,12 @@ public class Redux {
      */
     public static <S extends State, A extends Action> Store<S, A> createStore(Reducer<S, A> reducer, S preloadedState) {
         return createStore(reducer, preloadedState, null);
+    }
+
+    public static <S extends State, A extends Action> Store<S, A> createStore(
+            Reducer<S, A> reducer,
+            Function<BiFunction<Reducer<S, A>, S, Store<S, A>>, BiFunction<Reducer<S, A>, S, Store<S, A>>> enhancer) {
+        return createStore(reducer, null, enhancer);
     }
 
     /**
@@ -70,25 +80,24 @@ public class Redux {
      * @return A Redux store that lets you read the state, dispatch actions and subscribe to
      *         changes.
      */
-    public static <S extends State, A extends Action> Store<S, A> createStore(Reducer<S, A> reducer, S preloadedState,
-            Function<Function<S, A>, Store<S, A>> enhancer) {
-        if (preloadedState instanceof Function && enhancer == null) {
-            /*
-             * return ((Function<Function<S, A>, Store<S, A>>)preloadedState) // .apply((Function<S,
-             * A>) s -> createStore(reducer, s));
-             */
+    public static <S extends State, A extends Action> Store<S, A> createStore(
+            Reducer<S, A> reducer,
+            S preloadedState,
+            Function<BiFunction<Reducer<S, A>, S, Store<S, A>>, BiFunction<Reducer<S, A>, S, Store<S, A>>> enhancer) {
+        if (enhancer != null) {
+             return enhancer.apply(Redux::createStore).apply(reducer, preloadedState);
         }
 
         return new SimpleStore<>(preloadedState, reducer);
     }
 
-    public static <S extends State, A extends Action, X> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
+    public static <S extends State, A extends Action> Function<BiFunction<Reducer<S, A>, S, Store<S, A>>, BiFunction<Reducer<S, A>, S, Store<S, A>>> applyMiddleware(
             BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware1) {
         if (middleware1 == null) {
             throw new NullPointerException("middlewares must not be null");
         }
-        return createStore -> params -> {
-            Store<S, A> store = createStore.apply(params);
+        return createStore -> (state, action) -> {
+            Store<S, A> store = createStore.apply(state, action);
             return new Store<S, A>() {
 
                 @Override
@@ -116,14 +125,14 @@ public class Redux {
         };
     }
 
-    public static <S extends State, A extends Action, X> Function<Function<Params<S, A>, Store<S, A>>, Function<Params<S, A>, Store<S, A>>> applyMiddleware(
+    public static <S extends State, A extends Action> Function<BiFunction<Reducer<S, A>, S, Store<S, A>>, BiFunction<Reducer<S, A>, S, Store<S, A>>> applyMiddleware(
             BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware1,
             BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware2) {
         if (middleware1 == null || middleware2 == null) {
             throw new NullPointerException("middlewares must not be null");
         }
-        return createStore -> params -> {
-            Store<S, A> store = createStore.apply(params);
+        return createStore -> (reducer, action) -> {
+            Store<S, A> store = createStore.apply(reducer, action);
             return new Store<S, A>() {
 
                 @Override

@@ -29,9 +29,9 @@ public class ApplyMiddlewareTest {
     public void testWrapsDispatchMethodWithMiddlewareOnce() throws Exception {
         BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Consumer<TodoAction>, Consumer<TodoAction>>> spy =
                 (dispatch, getState) -> next -> action -> { next.accept(action); reachable = true; };
-        Store<Todos, TodoAction> store = Redux.<Todos, TodoAction, TodoAction>applyMiddleware(spy, Middleware::thunk) //
+        Store<Todos, TodoAction> store = Redux.applyMiddleware(spy, Middleware::thunk) //
                 .apply(Redux::createStore) //
-                .apply(new Params<>(Reducers.todos()));
+                .apply(Reducers.todos(), null);
 
         store.dispatch(addTodo("Use Redux"));
         store.dispatch(addTodo("Flux FTW!"));
@@ -46,9 +46,9 @@ public class ApplyMiddlewareTest {
     public void testPassesRecursiveDispatchesThroughTheMiddlewareChain () throws Exception {
         BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Consumer<TodoAction>, Consumer<TodoAction>>> spy =
                 (dispatch, getState) -> next -> action -> { next.accept(action); ++reachedCnt; };
-        Store<Todos, TodoAction> store = Redux.<Todos, TodoAction, TodoAction>applyMiddleware(spy, Middleware::thunk) //
+        Store<Todos, TodoAction> store = Redux.applyMiddleware(spy, Middleware::thunk) //
                 .apply(Redux::createStore) //
-                .apply(new Params<>(Reducers.todos()));
+                .apply(Reducers.todos(), null);
 
         store.dispatch(addTodoAsync("Use Redux"));
         assertEquals(2, reachedCnt);
@@ -56,9 +56,9 @@ public class ApplyMiddlewareTest {
 
     @Test
     public void testWorksWithThunkMiddleware() throws Exception {
-        Store<Todos, TodoAction> store = Redux.<Todos, TodoAction, TodoAction>applyMiddleware(Middleware::thunk) //
+        Store<Todos, TodoAction> store = Redux.<Todos, TodoAction>applyMiddleware(Middleware::thunk) //
                 .apply(Redux::createStore) //
-                .apply(new Params<>(Reducers.todos()));
+                .apply(Reducers.todos(), null);
         store.dispatch(addTodoIfEmpty("Hello"));
         assertEquals(new Todos(new Todos.State(1, "Hello")), store.getState());
 
@@ -70,6 +70,23 @@ public class ApplyMiddlewareTest {
 
         store.dispatch(addTodoAsync("Maybe"));
         assertEquals(new Todos(new Todos.State(1, "Hello"), new Todos.State(2, "World"), new Todos.State(3, "Maybe")), store.getState());
+    }
+
+    @Test
+    public void testKeepsUnwrappedDispatchAvailableWhileMiddlewareIsInitializing() throws Exception {
+        // This is documenting the existing behavior in Redux 3.x.
+        // We plan to forbid this in Redux 4.x.
+
+        BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Consumer<TodoAction>, Consumer<TodoAction>>> earlyDispatch = // 
+                (dispatch, getState) -> {
+            dispatch.accept(addTodo("Hello"));
+            return todoActionConsumer -> action -> System.out.println(action);
+        };
+
+        Function<BiFunction<Reducer<Todos, TodoAction>, Todos, Store<Todos, TodoAction>>, BiFunction<Reducer<Todos, TodoAction>, Todos, Store<Todos, TodoAction>>> func = Redux.applyMiddleware(earlyDispatch);
+        Store<Todos, TodoAction> store = Redux.createStore(Reducers.todos(), func);
+        assertEquals(new Todos(new Todos.State(1, "Hello")), store.getState());
+
     }
 
 }
