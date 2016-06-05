@@ -7,7 +7,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -39,9 +38,9 @@ public class Redux {
     public static <S extends State, A extends Action> Store<S, A> createStore(Reducer<S, A> reducer) {
         return createStore(reducer, null, null);
     }
-    
+
     /**
-     * 
+     *
      * @param reducer
      *            A function that returns the next state tree, given the current state tree and the
      *            action to handle
@@ -59,12 +58,12 @@ public class Redux {
 
     public static <S extends State, A extends Action> Store<S, A> createStore(
             Reducer<S, A> reducer,
-            Function<BiFunction<Reducer<S, A>, S, Store<S, A>>, BiFunction<Reducer<S, A>, S, Store<S, A>>> enhancer) {
+            Enhancer<S, A> enhancer) {
         return createStore(reducer, null, enhancer);
     }
 
     /**
-     * 
+     *
      * @param reducer
      *            A function that returns the next state tree, given the current state tree and the
      *            action to handle
@@ -80,10 +79,7 @@ public class Redux {
      * @return A Redux store that lets you read the state, dispatch actions and subscribe to
      *         changes.
      */
-    public static <S extends State, A extends Action> Store<S, A> createStore(
-            Reducer<S, A> reducer,
-            S preloadedState,
-            Function<BiFunction<Reducer<S, A>, S, Store<S, A>>, BiFunction<Reducer<S, A>, S, Store<S, A>>> enhancer) {
+    public static <S extends State, A extends Action> Store<S, A> createStore(Reducer<S, A> reducer, S preloadedState, Enhancer<S, A> enhancer) {
         if (enhancer != null) {
              return enhancer.apply(Redux::createStore).apply(reducer, preloadedState);
         }
@@ -91,13 +87,13 @@ public class Redux {
         return new SimpleStore<>(preloadedState, reducer);
     }
 
-    public static <S extends State, A extends Action> Function<BiFunction<Reducer<S, A>, S, Store<S, A>>, BiFunction<Reducer<S, A>, S, Store<S, A>>> applyMiddleware(
-            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware1) {
+    public static <S extends State, A extends Action> Enhancer<S, A> applyMiddleware(
+            BiFunction<Function<A, A>, Supplier<S>, Function<Function<A, A>, Function<A, A>>> middleware1) {
         if (middleware1 == null) {
             throw new NullPointerException("middlewares must not be null");
         }
-        return createStore -> (state, action) -> {
-            Store<S, A> store = createStore.apply(state, action);
+        return createStore -> (reducer, action) -> {
+            Store<S, A> store =  createStore.apply(reducer, action);
             return new Store<S, A>() {
 
                 @Override
@@ -105,16 +101,17 @@ public class Redux {
                     return store.getState();
                 }
 
-                Consumer<A> composed;
+                @Override
+                public A dispatch(A action) {
+                    return compose( //
+                            middleware1.apply(this::dispatch, store::getState)) //
+                            .apply(store::dispatch) //
+                            .apply(action);
+                }
 
                 @Override
-                public void dispatch(A action) {
-                    if (composed == null) {
-                        composed = compose( //
-                                middleware1.apply(this::dispatch, store::getState)) //
-                                .apply(store::dispatch);
-                    }
-                    composed.accept(action);
+                public <R> R dispatch(Function<Function<A, A>, R> action) {
+                    return action.apply(this::dispatch);
                 }
 
                 @Override
@@ -125,9 +122,9 @@ public class Redux {
         };
     }
 
-    public static <S extends State, A extends Action> Function<BiFunction<Reducer<S, A>, S, Store<S, A>>, BiFunction<Reducer<S, A>, S, Store<S, A>>> applyMiddleware(
-            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware1,
-            BiFunction<Consumer<A>, Supplier<S>, Function<Consumer<A>, Consumer<A>>> middleware2) {
+    public static <S extends State, A extends Action, T, R> Enhancer<S, A> applyMiddleware(
+            BiFunction<Function<A, A>, Supplier<S>, Function<Function<A, A>, Function<A, A>>> middleware1,
+            BiFunction<Function<A, A>, Supplier<S>, Function<Function<A, A>, Function<A, A>>> middleware2) {
         if (middleware1 == null || middleware2 == null) {
             throw new NullPointerException("middlewares must not be null");
         }
@@ -140,17 +137,22 @@ public class Redux {
                     return store.getState();
                 }
 
-                Consumer<A> composed;
+                @Override
+                public <R> R dispatch(Function<Function<A, A>, R> action) {
+                    compose( //
+                            middleware1.apply(store::dispatch, store::getState), //
+                            middleware2.apply(store::dispatch, store::getState)) //
+                            .apply(store::dispatch); //
+                    return action.apply(this::dispatch);
+                }
 
                 @Override
-                public void dispatch(A action) {
-                    if (composed == null) {
-                        composed = compose( //
-                                middleware1.apply(this::dispatch, store::getState), //
-                                middleware2.apply(this::dispatch, store::getState)) //
-                                        .apply(store::dispatch);
-                    }
-                    composed.accept(action);
+                public A dispatch(A action) {
+                    return compose( //
+                            middleware1.apply(store::dispatch, store::getState), //
+                            middleware2.apply(store::dispatch, store::getState)) //
+                            .apply(store::dispatch) //
+                            .apply(action);
                 }
 
                 @Override
@@ -164,7 +166,7 @@ public class Redux {
     /**
      * Composes single-argument functions from right to left. The rightmost function can take
      * multiple arguments as it provides the signature for the resulting composite function.
-     * 
+     *
      * @param func1
      *            The functions to compose.
      * @return A function obtained by composing the argument functions from right to left. For

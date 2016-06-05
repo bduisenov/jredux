@@ -4,10 +4,10 @@ import static org.js.redux.helpers.ActionCreators.addTodo;
 import static org.js.redux.helpers.ActionCreators.addTodoAsync;
 import static org.js.redux.helpers.ActionCreators.addTodoIfEmpty;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -27,11 +27,12 @@ public class ApplyMiddlewareTest {
 
     @Test
     public void testWrapsDispatchMethodWithMiddlewareOnce() throws Exception {
-        BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Consumer<TodoAction>, Consumer<TodoAction>>> spy =
-                (dispatch, getState) -> next -> action -> { next.accept(action); reachable = true; };
+        BiFunction<Function<TodoAction, TodoAction>, Supplier<Todos>, Function<Function<TodoAction, TodoAction>, Function<TodoAction, TodoAction>>> spy =
+                (dispatch, getState) -> next -> action -> {  reachable = true; return next.apply(action); };
+        Reducer<Todos, TodoAction> todos = Reducers.todos();
         Store<Todos, TodoAction> store = Redux.applyMiddleware(spy, Middleware::thunk) //
                 .apply(Redux::createStore) //
-                .apply(Reducers.todos(), null);
+                .apply(todos, null);
 
         store.dispatch(addTodo("Use Redux"));
         store.dispatch(addTodo("Flux FTW!"));
@@ -44,18 +45,22 @@ public class ApplyMiddlewareTest {
 
     @Test
     public void testPassesRecursiveDispatchesThroughTheMiddlewareChain () throws Exception {
-        BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Consumer<TodoAction>, Consumer<TodoAction>>> spy =
-                (dispatch, getState) -> next -> action -> { next.accept(action); ++reachedCnt; };
+        BiFunction<Function<TodoAction, TodoAction>, Supplier<Todos>, Function<Function<TodoAction, TodoAction>, Function<TodoAction, TodoAction>>> spy =
+                (dispatch, getState) -> next -> action -> { ++reachedCnt; return next.apply(action); };
+
         Store<Todos, TodoAction> store = Redux.applyMiddleware(spy, Middleware::thunk) //
                 .apply(Redux::createStore) //
                 .apply(Reducers.todos(), null);
 
-        store.dispatch(addTodoAsync("Use Redux"));
-        assertEquals(2, reachedCnt);
+        boolean failed = store.dispatch(addTodoAsync("Use Redux")).whenComplete((a, t) -> {
+            assertEquals(2, reachedCnt);
+        }).isCompletedExceptionally();
+        assertFalse(failed);
     }
 
     @Test
     public void testWorksWithThunkMiddleware() throws Exception {
+
         Store<Todos, TodoAction> store = Redux.<Todos, TodoAction>applyMiddleware(Middleware::thunk) //
                 .apply(Redux::createStore) //
                 .apply(Reducers.todos(), null);
@@ -77,13 +82,13 @@ public class ApplyMiddlewareTest {
         // This is documenting the existing behavior in Redux 3.x.
         // We plan to forbid this in Redux 4.x.
 
-        BiFunction<Consumer<TodoAction>, Supplier<Todos>, Function<Consumer<TodoAction>, Consumer<TodoAction>>> earlyDispatch = // 
+        BiFunction<Function<TodoAction, TodoAction>, Supplier<Todos>, Function<Function<TodoAction, TodoAction>, Function<TodoAction, TodoAction>>> earlyDispatch = //
                 (dispatch, getState) -> {
-            dispatch.accept(addTodo("Hello"));
-            return todoActionConsumer -> action -> System.out.println(action);
+            dispatch.apply(addTodo("Hello"));
+            return todoActionConsumer -> action -> action;
         };
 
-        Function<BiFunction<Reducer<Todos, TodoAction>, Todos, Store<Todos, TodoAction>>, BiFunction<Reducer<Todos, TodoAction>, Todos, Store<Todos, TodoAction>>> func = Redux.applyMiddleware(earlyDispatch);
+        Enhancer<Todos, TodoAction> func = Redux.applyMiddleware(earlyDispatch);
         Store<Todos, TodoAction> store = Redux.createStore(Reducers.todos(), func);
         assertEquals(new Todos(new Todos.State(1, "Hello")), store.getState());
 

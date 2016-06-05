@@ -1,8 +1,8 @@
 package org.js.redux.helpers;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -14,35 +14,24 @@ public class ActionCreators {
         return new TodoAction(ActionTypes.ADD_TODO, text);
     }
 
-    static class todoAsync extends TodoAction implements Consumer<Consumer<TodoAction>> {
-
-        todoAsync(String text) {
-            this.text = text;
-        }
-
-        @Override
-        public void accept(Consumer<TodoAction> dispatch) {
-            CompletableFuture.completedFuture(text) //
-                    .thenAccept(text1 -> dispatch.accept(addTodo(text1)));
-        }
-    }
-
     // (dispatch) => Promise => resolve => dispatch(addTodo(text))
-    public static TodoAction addTodoAsync(String text) {
-        return new todoAsync(text);
+    public static Function<Function<TodoAction, TodoAction>, CompletableFuture<TodoAction>> addTodoAsync(String text) {
+        return dispatch -> CompletableFuture.completedFuture(text) //
+                .thenApply(text1 -> dispatch.apply(addTodo(text1)));
     }
 
-    static class todoIfEmpty extends TodoAction implements BiConsumer<Consumer<TodoAction>, Supplier<Todos>> {
+    static class todoIfEmpty extends TodoAction implements BiFunction<Function<TodoAction, TodoAction>, Supplier<Todos>, TodoAction> {
 
         todoIfEmpty(String text) {
             this.text = text;
         }
 
         @Override
-        public void accept(Consumer<TodoAction> dispatch, Supplier<Todos> getState) {
+        public TodoAction apply(Function<TodoAction, TodoAction> dispatch, Supplier<Todos> getState) {
             if (getState.get() == null) {
-                dispatch.accept(addTodo(text));
+                return dispatch.apply(addTodo(text));
             }
+            return null;
         }
     }
 
