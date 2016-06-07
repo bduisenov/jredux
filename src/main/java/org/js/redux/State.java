@@ -9,13 +9,13 @@ import java.util.Map;
  */
 public final class State {
 
-    private final Map<String, Object> state;
+    private final Map<Enum<?>, Object> state;
 
-    State(Map<String, Object> state) {
+    State(Map<Enum<?>, Object> state) {
         this.state = state;
     }
 
-    public <T> T get(String key, Class<T> type) {
+    public <T> T get(Enum<?> key, Class<T> type) {
         Object value = state.get(key);
         if (value != null && value.getClass().isAssignableFrom(type)) {
             return type.cast(value);
@@ -29,18 +29,18 @@ public final class State {
         return new State(Collections.emptyMap());
     }
 
-    public static State of(String k1, Object v1) {
+    public static State of(Enum<?> k1, Object v1) {
         if (k1 == null || v1 == null) {
             throw new NullPointerException();
         }
         return new State(Collections.singletonMap(k1, v1));
     }
 
-    public static State of(String k1, Object v1, String k2, Object v2) {
+    public static State of(Enum<?> k1, Object v1, Enum<?> k2, Object v2) {
         if (k1 == null || v1 == null || k2 == null || v2 == null) {
             throw new NullPointerException();
         }
-        Map<String, Object> state = new LinkedHashMap<>(2);
+        Map<Enum<?>, Object> state = new LinkedHashMap<>(2);
         state.put(k1, v1);
         state.put(k2, v2);
         return new State(state);

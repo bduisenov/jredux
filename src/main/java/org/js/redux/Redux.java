@@ -39,13 +39,13 @@ public class Redux {
      * @return A add function that invokes every add inside the passed object, and builds a
      *         state object with the same shape.
      */
-    public static <R extends ReducersMapObject<A>, A extends Action> Reducer<A> combineReducers(R reducers) {
+    public static <R extends ReducersMapObject> Reducer combineReducers(R reducers) {
         IllegalStateException sanityError = assertReducerSanity(reducers.getReducers());
 
-        return new Reducer<A>() {
+        return new Reducer() {
 
             @Override
-            public State apply(State state, A action) {
+            public State apply(State state, Action action) {
                 if (state == null) {
                     state = State.empty();
                 }
@@ -59,10 +59,10 @@ public class Redux {
                 }
 
                 boolean hasChanged = false;
-                Map<String, Object> nextState = new LinkedHashMap<>();
-                for (Map.Entry<String, BiFunction<Object, A, Object>> entry : reducers.getReducers().entrySet()) {
-                    String key = entry.getKey();
-                    BiFunction<Object, A, Object> reducer = entry.getValue();
+                Map<Enum<?>, Object> nextState = new LinkedHashMap<>();
+                for (Map.Entry<Enum<?>, BiFunction<Object, Action, Object>> entry : reducers.getReducers().entrySet()) {
+                    Enum<?> key = entry.getKey();
+                    BiFunction<Object, Action, Object> reducer = entry.getValue();
 
                     Class<?> stateType = reducers.getTypes().get(key);
 
@@ -86,19 +86,19 @@ public class Redux {
     }
 
     private static <A extends Action> String getUnexpectedStateShapeWarningMessage(State state,
-            Map<String, BiFunction<Object, A, Object>> reducers, A action) {
+            Map<Enum<?>, BiFunction<Object, Action, Object>> reducers, Action action) {
         if (reducers.isEmpty()) {
             return unexpectedStateShapeWarningMessage;
         }
         return null;
     }
 
-    private static <A extends Action> String getUndefinedStateErrorMessage(String key, A action) {
-        String actionName = (action != null && action.getType() != null) ? action.getType().toString() : "an action";
+    private static <A extends Action> String getUndefinedStateErrorMessage(Enum<?> key, Action action) {
+        String actionName = (action != null && action.type != null) ? action.type.toString() : "an action";
         return String.format(undefinedStateErrorMessage, actionName, key);
     }
 
-    private static <A extends Action> IllegalStateException assertReducerSanity(Map<String, BiFunction<Object, A, Object>> finalReducers) {
+    private static <A extends Action> IllegalStateException assertReducerSanity(Map<Enum<?>, BiFunction<Object, A, Object>> finalReducers) {
         return null;
     }
 

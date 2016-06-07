@@ -9,22 +9,22 @@ import java.util.function.Function;
 /**
  * Object whose values correspond to different add functions.
  */
-public final class ReducersMapObject<A extends Action> {
+public final class ReducersMapObject {
 
-    private final Map<String, Class<?>> types;
+    private final Map<Enum<?>, Class<?>> types;
 
-    private final Map<String, BiFunction<Object, A, Object>> reducers;
+    private final Map<Enum<?>, BiFunction<Object, Action, Object>> reducers;
 
-    private ReducersMapObject(Map<String, Class<?>> types, Map<String, BiFunction<Object, A, Object>> reducers) {
+    private ReducersMapObject(Map<Enum<?>, Class<?>> types, Map<Enum<?>, BiFunction<Object, Action, Object>> reducers) {
         this.types = types;
         this.reducers = reducers;
     }
 
-    public Map<String, Class<?>> getTypes() {
+    public Map<Enum<?>, Class<?>> getTypes() {
         return types;
     }
 
-    public Map<String, BiFunction<Object, A, Object>> getReducers() {
+    public Map<Enum<?>, BiFunction<Object, Action, Object>> getReducers() {
         return reducers;
     }
 
@@ -34,7 +34,7 @@ public final class ReducersMapObject<A extends Action> {
 
     public interface BuildStep<A extends Action> {
 
-        ReducersMapObject<A> build();
+        ReducersMapObject build();
     }
 
     public interface ReducerStep<A extends Action> {
@@ -59,7 +59,7 @@ public final class ReducersMapObject<A extends Action> {
 
     public interface KeyStep<A extends Action> {
 
-        InitialValueOrStateTypeStep<A> add(String key);
+        InitialValueOrStateTypeStep<A> add(Enum<?> key);
     }
 
     public interface KeyOrBuildStep<A extends Action> extends KeyStep<A>, BuildStep<A> {
@@ -77,23 +77,20 @@ public final class ReducersMapObject<A extends Action> {
             ReducerStep<A>, //
             BuildStep<A> {
 
-        private final Map<String, Class<?>> types = new HashMap<>();
+        private final Map<Enum<?>, Class<?>> types = new HashMap<>();
 
-        private final Map<String, BiFunction<Object, A, Object>> reducers = new LinkedHashMap<>();
+        private final Map<Enum<?>, BiFunction<Object, Action, Object>> reducers = new LinkedHashMap<>();
 
-        private String key;
+        private Enum<?> key;
 
         private Class type;
 
         private Object initialValue;
 
         @Override
-        public InitialValueOrStateTypeStep<A> add(String key) {
+        public InitialValueOrStateTypeStep<A> add(Enum<?> key) {
             if (key == null) {
                 throw new NullPointerException("reducer's key must be set");
-            }
-            if (key.isEmpty()) {
-                throw new IllegalArgumentException("reducer's key must be set");
             }
             this.key = key;
             return this;
@@ -123,13 +120,13 @@ public final class ReducersMapObject<A extends Action> {
             types.put(key, type);
 
             if (initialValue == null) {
-                reducers.put(key, (BiFunction<Object, A, Object>) reducer);
+                reducers.put(key, (BiFunction<Object, Action, Object>) reducer);
             } else {
                 Function<T, BiFunction<T, A, T>> reducerWithInitialValue = iv -> (state, action) -> {
                     state = state == null ? iv : state;
                     return reducer.apply(state, action);
                 };
-                reducers.put(key, (BiFunction<Object, A, Object>) reducerWithInitialValue.apply((T)initialValue));
+                reducers.put(key, (BiFunction<Object, Action, Object>) reducerWithInitialValue.apply((T)initialValue));
             }
 
             this.key = null;
@@ -140,8 +137,8 @@ public final class ReducersMapObject<A extends Action> {
         }
 
         @Override
-        public ReducersMapObject<A> build() {
-            return new ReducersMapObject<>(types, reducers);
+        public ReducersMapObject build() {
+            return new ReducersMapObject(types, reducers);
         }
 
     }

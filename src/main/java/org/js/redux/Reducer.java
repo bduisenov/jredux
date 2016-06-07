@@ -22,8 +22,8 @@ package org.js.redux;
  * @param <S>
  *            State object type.
  */
-public interface Reducer<A extends Action> {
+public interface Reducer {
 
-    State apply(State state, A action);
+    State apply(State state, Action action);
 
 }

@@ -1,5 +1,15 @@
 package org.js.redux;
 
+import static org.js.redux.CombineRudecersTest.ReducerKeys.child1;
+import static org.js.redux.CombineRudecersTest.ReducerKeys.child2;
+import static org.js.redux.CombineRudecersTest.ReducerKeys.child3;
+import static org.js.redux.CombineRudecersTest.ReducerKeys.counter;
+import static org.js.redux.CombineRudecersTest.ReducerKeys.stack;
+import static org.js.redux.CombineRudecersTest.ReducerKeys.throwingReducer;
+import static org.js.redux.CombineRudecersTest.Type.FOO;
+import static org.js.redux.CombineRudecersTest.Type.increment;
+import static org.js.redux.CombineRudecersTest.Type.push;
+import static org.js.redux.CombineRudecersTest.Type.whatever;
 import static org.js.redux.Redux.combineReducers;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
@@ -19,34 +29,34 @@ public class CombineRudecersTest {
 
     @Test
     public void returnsACompositeReducerThatMapsTheStateKeysToGivenReducers() {
-        Reducer<CombinedAction> reducer = combineReducers(ReducersMapObject.<CombinedAction>builder() //
-                .add("counter").withInitialValue(0) //
-                .reducer((Integer state, CombinedAction action) ->  //
-                        (action.getType().equals("increment")) ? state + 1 : state) //
-                .add("stack").withInitialValue(Collections.<String>emptyList()) //
-                .reducer((List<String> state, CombinedAction action) -> {
-                    if (action.getType().equals("push")) {
+        Reducer reducer = combineReducers(ReducersMapObject.<Action>builder() //
+                .add(counter).withInitialValue(0) //
+                .reducer((Integer state, Action action) ->  //
+                        (action.type == increment) ? state + 1 : state) //
+                .add(stack).withInitialValue(Collections.<String>emptyList()) //
+                .reducer((List<String> state, Action action) -> {
+                    if (action.type == push) {
                         List<String> newState = new ArrayList<>(state.size() + 1);
                         newState.addAll(state);
-                        newState.add(action.getValue());
+                        newState.add(action.getValue(String.class));
                         return newState;
                     }
                     return state;
                 }).build());
-        State s1 = reducer.apply(State.empty(), new CombinedAction("increment", null));
-        assertEquals(State.of("counter", 1, "stack", Collections.emptyList()), s1);
-        State s2 = reducer.apply(s1, new CombinedAction("push", "a"));
-        assertEquals(State.of("counter", 1, "stack", Collections.singletonList("a")), s2);
+        State s1 = reducer.apply(State.empty(), Action.of(increment));
+        assertEquals(State.of(counter, 1, stack, Collections.emptyList()), s1);
+        State s2 = reducer.apply(s1, Action.of(push, "a"));
+        assertEquals(State.of(counter, 1, stack, Collections.singletonList("a")), s2);
     }
 
     @Test
     public void throwsAnErrorIfAReducerReturnsUndefinedHandlingAnAction() {
-        Reducer<CombinedAction> reducer = combineReducers(
-                ReducersMapObject.<CombinedAction>builder() //
-                        .add("counter").withInitialValue(0) //
-                        .reducer((Integer state, CombinedAction action) -> {
-                            if (action != null && action.getType() != null) {
-                                switch (action.getType().toString()) {
+        Reducer reducer = combineReducers(
+                ReducersMapObject.<Action>builder() //
+                        .add(counter).withInitialValue(0) //
+                        .reducer((Integer state, Action action) -> {
+                            if (action != null && action.type != null) {
+                                switch (action.type.toString()) {
                                     case "increment":
                                         return state + 1;
                                     case "decrement":
@@ -58,21 +68,21 @@ public class CombineRudecersTest {
                             return null;
                         }).build());
         try {
-            reducer.apply(State.of("counter", 0), new CombinedAction("whatever", null));
+            reducer.apply(State.of(counter, 0), Action.of(whatever));
             fail();
         }catch (Exception e) {
             e.printStackTrace();
         }
 
         try {
-            reducer.apply(State.of("counter", 0), null);
+            reducer.apply(State.of(counter, 0), null);
             fail();
         }catch (Exception e) {
             e.printStackTrace();
         }
 
         try {
-            reducer.apply(State.of("counter", 0), new CombinedAction(null, null));
+            reducer.apply(State.of(counter, 0), Action.of());
             fail();
         }catch (Exception e) {
             e.printStackTrace();
@@ -83,10 +93,10 @@ public class CombineRudecersTest {
 
     @Test(expected = UnsupportedOperationException.class)
     public void catchesErrorThrownInReducerWhenInitializingAndRethrow() {
-        Reducer<CombinedAction> reducer = combineReducers(
-                ReducersMapObject.<CombinedAction>builder() //
-                        .add("throwingReducer").withStateType(Object.class) //
-                        .reducer((Object state, CombinedAction action) -> {
+        Reducer reducer = combineReducers(
+                ReducersMapObject.<Action>builder() //
+                        .add(throwingReducer).withStateType(Object.class) //
+                        .reducer((Object state, Action action) -> {
                             throw new UnsupportedOperationException("Error thrown in reducer");
                         }).build());
         reducer.apply(State.empty(), null);
@@ -96,37 +106,37 @@ public class CombineRudecersTest {
 
     @Test
     public void maintainsReferentialEqualityIfTheReducersItIsCombiningDo() {
-        Reducer<CombinedAction> reducer = combineReducers(
-                ReducersMapObject.<CombinedAction>builder() //
-                        .add("child1").withInitialValue(new Object()) //
-                        .reducer((Object state, CombinedAction action) -> state)
-                        .add("child2").withInitialValue(new Object()) //
-                        .reducer((Object state, CombinedAction action) -> state)
-                        .add("child3").withInitialValue(new Object()) //
-                        .reducer((Object state, CombinedAction action) -> state)
+        Reducer reducer = combineReducers(
+                ReducersMapObject.<Action>builder() //
+                        .add(child1).withInitialValue(new Object()) //
+                        .reducer((Object state, Action action) -> state)
+                        .add(child2).withInitialValue(new Object()) //
+                        .reducer((Object state, Action action) -> state)
+                        .add(child3).withInitialValue(new Object()) //
+                        .reducer((Object state, Action action) -> state)
                         .build());
-        State initialState = reducer.apply(null, new CombinedAction(null, null));
-        assertSame(initialState, reducer.apply(initialState, new CombinedAction("FOO", null)));
+        State initialState = reducer.apply(null, Action.of());
+        assertSame(initialState, reducer.apply(initialState, Action.of(FOO)));
     }
     
     @Test
     public void doesNotHaveReferentialEqualityIfOneOfTheReducersChangesSomething() {
-        Reducer<CombinedAction> reducer = combineReducers(
-                ReducersMapObject.<CombinedAction>builder() //
-                        .add("child1").withInitialValue(new Object()) //
-                        .reducer((Object state, CombinedAction action) -> state)
-                        .add("child2").withInitialValue(0) //
-                        .reducer((Integer state, CombinedAction action) -> {
-                            if (action.getType() != null && action.getType().toString().equals("increment")) {
+        Reducer reducer = combineReducers(
+                ReducersMapObject.<Action>builder() //
+                        .add(child1).withInitialValue(new Object()) //
+                        .reducer((Object state, Action action) -> state)
+                        .add(child2).withInitialValue(0) //
+                        .reducer((Integer state, Action action) -> {
+                            if (action.type != null && action.type.toString().equals("increment")) {
                                 return state + 1;
                             }
                             return state;
                         })
-                        .add("child3").withInitialValue(new Object()) //
-                        .reducer((Object state, CombinedAction action) -> state)
+                        .add(child3).withInitialValue(new Object()) //
+                        .reducer((Object state, Action action) -> state)
                         .build());
-        State initialState = reducer.apply(null, new CombinedAction(null, null));
-        assertNotSame(initialState, reducer.apply(initialState, new CombinedAction("increment", null)));
+        State initialState = reducer.apply(null, Action.of());
+        assertNotSame(initialState, reducer.apply(initialState, Action.of(increment)));
     }
 
     //TODO throws an error on first call if a reducer attempts to handle a private action
@@ -135,24 +145,11 @@ public class CombineRudecersTest {
 
     //TODO warns if input state does not match reducer shape
 
-    static class CombinedAction implements Action {
+    enum ReducerKeys {
+        counter, stack, throwingReducer, child1, child2, child3
+    }
 
-        private String type;
-
-        private String value;
-
-        public CombinedAction(String type, String value) {
-            this.type = type;
-            this.value = value;
-        }
-
-        @Override
-        public Object getType() {
-            return type;
-        }
-
-        public String getValue() {
-            return value;
-        }
+    enum Type {
+        increment, decrement, push, whatever, FOO;
     }
 }
