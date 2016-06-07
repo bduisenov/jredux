@@ -15,6 +15,9 @@ public class Redux {
     private static String undefinedStateErrorMessage = "Given action \"%s\", reducer \"%s\" returned undefined. "
             + "To ignore an action, you must explicitly return the previous state.";
 
+    private static String unexpectedStateShapeWarningMessage = "Store does not have a valid reducer. Make sure the argument passed "
+            + "to combineReducers is an object whose values are reducers.";
+
     private Redux() {
         //
     }
@@ -43,8 +46,16 @@ public class Redux {
 
             @Override
             public State apply(State state, A action) {
+                if (state == null) {
+                    state = State.empty();
+                }
                 if (sanityError != null) {
                     throw sanityError;
+                }
+
+                String warningMessage = getUnexpectedStateShapeWarningMessage(state, reducers.getReducers(), action);
+                if (warningMessage != null) {
+                    warning(warningMessage);
                 }
 
                 boolean hasChanged = false;
@@ -68,6 +79,18 @@ public class Redux {
             }
 
         };
+    }
+
+    private static void warning(String warningMessage) {
+        //FIXME
+    }
+
+    private static <A extends Action> String getUnexpectedStateShapeWarningMessage(State state,
+            Map<String, BiFunction<Object, A, Object>> reducers, A action) {
+        if (reducers.isEmpty()) {
+            return unexpectedStateShapeWarningMessage;
+        }
+        return null;
     }
 
     private static <A extends Action> String getUndefinedStateErrorMessage(String key, A action) {

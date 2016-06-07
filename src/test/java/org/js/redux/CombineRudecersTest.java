@@ -2,6 +2,8 @@ package org.js.redux;
 
 import static org.js.redux.Redux.combineReducers;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
@@ -17,12 +19,12 @@ public class CombineRudecersTest {
 
     @Test
     public void returnsACompositeReducerThatMapsTheStateKeysToGivenReducers() {
-        Reducer<CombinedAction> reducer = combineReducers(new ReducersMapObject.Builder<CombinedAction>() //
-                .add("counter", (Integer state, CombinedAction action) -> {//
-                        state = (state == null) ? 0 : state;
-                        return (action.getType().equals("increment")) ? state + 1 : state;
-                }) //
-                .add("stack", Collections.emptyList(), (List<String> state, CombinedAction action) -> {
+        Reducer<CombinedAction> reducer = combineReducers(ReducersMapObject.<CombinedAction>builder() //
+                .add("counter").withInitialValue(0) //
+                .reducer((Integer state, CombinedAction action) ->  //
+                        (action.getType().equals("increment")) ? state + 1 : state) //
+                .add("stack").withInitialValue(Collections.<String>emptyList()) //
+                .reducer((List<String> state, CombinedAction action) -> {
                     if (action.getType().equals("push")) {
                         List<String> newState = new ArrayList<>(state.size() + 1);
                         newState.addAll(state);
@@ -40,8 +42,9 @@ public class CombineRudecersTest {
     @Test
     public void throwsAnErrorIfAReducerReturnsUndefinedHandlingAnAction() {
         Reducer<CombinedAction> reducer = combineReducers(
-                new ReducersMapObject.Builder<CombinedAction>() //
-                        .add("counter", 0, (Integer state, CombinedAction action) -> {
+                ReducersMapObject.<CombinedAction>builder() //
+                        .add("counter").withInitialValue(0) //
+                        .reducer((Integer state, CombinedAction action) -> {
                             if (action != null && action.getType() != null) {
                                 switch (action.getType().toString()) {
                                     case "increment":
@@ -75,6 +78,62 @@ public class CombineRudecersTest {
             e.printStackTrace();
         }
     }
+
+    //TODO throws an error on first call if a reducer returns undefined initializing
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void catchesErrorThrownInReducerWhenInitializingAndRethrow() {
+        Reducer<CombinedAction> reducer = combineReducers(
+                ReducersMapObject.<CombinedAction>builder() //
+                        .add("throwingReducer").withStateType(Object.class) //
+                        .reducer((Object state, CombinedAction action) -> {
+                            throw new UnsupportedOperationException("Error thrown in reducer");
+                        }).build());
+        reducer.apply(State.empty(), null);
+    }
+
+    //TODO allows a symbol to be used as an action type
+
+    @Test
+    public void maintainsReferentialEqualityIfTheReducersItIsCombiningDo() {
+        Reducer<CombinedAction> reducer = combineReducers(
+                ReducersMapObject.<CombinedAction>builder() //
+                        .add("child1").withInitialValue(new Object()) //
+                        .reducer((Object state, CombinedAction action) -> state)
+                        .add("child2").withInitialValue(new Object()) //
+                        .reducer((Object state, CombinedAction action) -> state)
+                        .add("child3").withInitialValue(new Object()) //
+                        .reducer((Object state, CombinedAction action) -> state)
+                        .build());
+        State initialState = reducer.apply(null, new CombinedAction(null, null));
+        assertSame(initialState, reducer.apply(initialState, new CombinedAction("FOO", null)));
+    }
+    
+    @Test
+    public void doesNotHaveReferentialEqualityIfOneOfTheReducersChangesSomething() {
+        Reducer<CombinedAction> reducer = combineReducers(
+                ReducersMapObject.<CombinedAction>builder() //
+                        .add("child1").withInitialValue(new Object()) //
+                        .reducer((Object state, CombinedAction action) -> state)
+                        .add("child2").withInitialValue(0) //
+                        .reducer((Integer state, CombinedAction action) -> {
+                            if (action.getType() != null && action.getType().toString().equals("increment")) {
+                                return state + 1;
+                            }
+                            return state;
+                        })
+                        .add("child3").withInitialValue(new Object()) //
+                        .reducer((Object state, CombinedAction action) -> state)
+                        .build());
+        State initialState = reducer.apply(null, new CombinedAction(null, null));
+        assertNotSame(initialState, reducer.apply(initialState, new CombinedAction("increment", null)));
+    }
+
+    //TODO throws an error on first call if a reducer attempts to handle a private action
+
+    //TODO warns if no reducers are passed to combineReducers
+
+    //TODO warns if input state does not match reducer shape
 
     static class CombinedAction implements Action {
 
