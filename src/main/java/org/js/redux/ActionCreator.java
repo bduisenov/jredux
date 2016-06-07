@@ -3,9 +3,8 @@ package org.js.redux;
 /**
  * Created by bduisenov on 05/06/16.
  */
-@FunctionalInterface
-public interface Listener {
+public interface ActionCreator<A> {
 
-    void onDispatch();
+    A get(Object... args);
 
 }

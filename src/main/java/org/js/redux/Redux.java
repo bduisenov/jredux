@@ -1,347 +1,177 @@
 package org.js.redux;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
-
-import org.js.redux.utils.TypeResolver;
 
 /**
- * Created by bduisenov on 01/06/16.
+ * Created by bduisenov on 05/06/16.
  */
 public class Redux {
 
-    private static String undefinedStateErrorMessage = "Given action %s, reducer %s returned undefined. "
+    private static String undefinedStateErrorMessage = "Given action \"%s\", reducer \"%s\" returned undefined. "
             + "To ignore an action, you must explicitly return the previous state.";
-
-    private static String undefinedInitialStateMessage = "Reducer %s returned undefined during initialization. "
-            + "If the state passed to the reducer is undefined, you must "
-            + "explicitly return the initial state. The initial state may " + "not be undefined";
-
-    private static String unexpectedStateShapeWarningMessage = "Store does not have a valid reducer. Make sure "
-            + "the argument passed  to combineReducers is an object whose values are reducers.";
 
     private Redux() {
         //
     }
 
-    /*public static <S extends State, A extends Action> Store<S, A> createStore(S state, A action) {
-        return createStore(params.reducer, params.preloadedState);
-    }*/
-
-    public static <S extends State, A extends Action> Store<S, A> createStore(Reducer<S, A> reducer) {
-        return createStore(reducer, null, null);
-    }
-
     /**
+     * Turns an object whose values are different add functions, into a single add function.
+     * It will call every child add, and gather their results into a single state object, whose
+     * keys correspond to the keys of the passed add functions.
+     * 
+     * @param reducers
+     *            An object whose values correspond to different add functions that need to be
+     *            combined into one. One handy way to obtain it is to use ES6 `import * as reducers`
+     *            syntax. The reducers may never return undefined for any action. Instead, they
+     *            should return their initial state if the state passed to them was undefined, and
+     *            the current state for any unrecognized action.
+     * @param <S>
+     *            Combined state object type.
      *
-     * @param reducer
-     *            A function that returns the next state tree, given the current state tree and the
-     *            action to handle
-     * @param preloadedState
-     *            The initial state. You may optionally specify it to hydrate the state from the
-     *            server in universal apps, or to restore a previously serialized user session. If
-     *            you use `combineReducers` to produce the root reducer function, this must be an
-     *            object with the same shape as `combineReducers` keys.
-     * @return A Redux store that lets you read the state, dispatch actions and subscribe to
-     *         changes.
+     * @return A add function that invokes every add inside the passed object, and builds a
+     *         state object with the same shape.
      */
-    public static <S extends State, A extends Action> Store<S, A> createStore(Reducer<S, A> reducer, S preloadedState) {
-        return createStore(reducer, preloadedState, null);
-    }
+    public static <R extends ReducersMapObject<A>, A extends Action> Reducer<A> combineReducers(R reducers) {
+        IllegalStateException sanityError = assertReducerSanity(reducers.getReducers());
 
-    public static <S extends State, A extends Action> Store<S, A> createStore(
-            Reducer<S, A> reducer,
-            Enhancer<S, A> enhancer) {
-        return createStore(reducer, null, enhancer);
-    }
+        return new Reducer<A>() {
 
-    /**
-     *
-     * @param reducer
-     *            A function that returns the next state tree, given the current state tree and the
-     *            action to handle
-     * @param preloadedState
-     *            The initial state. You may optionally specify it to hydrate the state from the
-     *            server in universal apps, or to restore a previously serialized user session. If
-     *            you use `combineReducers` to produce the root reducer function, this must be an
-     *            object with the same shape as `combineReducers` keys.
-     * @param enhancer
-     *            The store enhancer. You may optionally specify it to enhance the store with
-     *            third-party capabilities such as middleware, time travel, persistence, etc. The
-     *            only store enhancer that ships with Redux is `applyMiddleware()`.
-     * @return A Redux store that lets you read the state, dispatch actions and subscribe to
-     *         changes.
-     */
-    public static <S extends State, A extends Action> Store<S, A> createStore(Reducer<S, A> reducer, S preloadedState, Enhancer<S, A> enhancer) {
-        if (enhancer != null) {
-             return enhancer.apply(Redux::createStore).apply(reducer, preloadedState);
-        }
-
-        return new SimpleStore<>(preloadedState, reducer);
-    }
-
-    public static <S extends State, A extends Action> Enhancer<S, A> applyMiddleware(
-            BiFunction<Function<A, A>, Supplier<S>, Function<Function<A, A>, Function<A, A>>> middleware1) {
-        if (middleware1 == null) {
-            throw new NullPointerException("middlewares must not be null");
-        }
-        return createStore -> (reducer, action) -> {
-            Store<S, A> store =  createStore.apply(reducer, action);
-            return new Store<S, A>() {
-
-                @Override
-                public S getState() {
-                    return store.getState();
+            @Override
+            public State apply(State state, A action) {
+                if (sanityError != null) {
+                    throw sanityError;
                 }
 
-                @Override
-                public A dispatch(A action) {
-                    return compose( //
-                            middleware1.apply(this::dispatch, store::getState)) //
-                            .apply(store::dispatch) //
-                            .apply(action);
-                }
+                boolean hasChanged = false;
+                Map<String, Object> nextState = new LinkedHashMap<>();
+                for (Map.Entry<String, BiFunction<Object, A, Object>> entry : reducers.getReducers().entrySet()) {
+                    String key = entry.getKey();
+                    BiFunction<Object, A, Object> reducer = entry.getValue();
 
-                @Override
-                public <R> R dispatch(Function<Function<A, A>, R> action) {
-                    return action.apply(this::dispatch);
-                }
+                    Class<?> stateType = reducers.getTypes().get(key);
 
-                @Override
-                public Subscription subscribe(Listener listener) {
-                    return store.subscribe(listener);
+                    Object previousStateForKey = state.get(key, stateType);
+                    Object nextStateForKey = reducer.apply(previousStateForKey, action);
+                    if (nextStateForKey == null) {
+                        String errorMessage = getUndefinedStateErrorMessage(key, action);
+                        throw new RuntimeException(errorMessage);
+                    }
+                    nextState.put(key, nextStateForKey);
+                    hasChanged = hasChanged || nextStateForKey != previousStateForKey;
                 }
-            };
+                return hasChanged ? new State(nextState) : state;
+            }
+
         };
     }
 
-    public static <S extends State, A extends Action, T, R> Enhancer<S, A> applyMiddleware(
-            BiFunction<Function<A, A>, Supplier<S>, Function<Function<A, A>, Function<A, A>>> middleware1,
-            BiFunction<Function<A, A>, Supplier<S>, Function<Function<A, A>, Function<A, A>>> middleware2) {
-        if (middleware1 == null || middleware2 == null) {
-            throw new NullPointerException("middlewares must not be null");
-        }
-        return createStore -> (reducer, action) -> {
-            Store<S, A> store = createStore.apply(reducer, action);
-            return new Store<S, A>() {
-
-                @Override
-                public S getState() {
-                    return store.getState();
-                }
-
-                @Override
-                public <R> R dispatch(Function<Function<A, A>, R> action) {
-                    compose( //
-                            middleware1.apply(store::dispatch, store::getState), //
-                            middleware2.apply(store::dispatch, store::getState)) //
-                            .apply(store::dispatch); //
-                    return action.apply(this::dispatch);
-                }
-
-                @Override
-                public A dispatch(A action) {
-                    return compose( //
-                            middleware1.apply(store::dispatch, store::getState), //
-                            middleware2.apply(store::dispatch, store::getState)) //
-                            .apply(store::dispatch) //
-                            .apply(action);
-                }
-
-                @Override
-                public Subscription subscribe(Listener listener) {
-                    return store.subscribe(listener);
-                }
-            };
-        };
+    private static <A extends Action> String getUndefinedStateErrorMessage(String key, A action) {
+        String actionName = (action != null && action.getType() != null) ? action.getType().toString() : "an action";
+        return String.format(undefinedStateErrorMessage, actionName, key);
     }
+
+    private static <A extends Action> IllegalStateException assertReducerSanity(Map<String, BiFunction<Object, A, Object>> finalReducers) {
+        return null;
+    }
+
+    /**
+     * chain[function(next) => action =>]
+     * dispatch = compose(...chain)(store.dispatch) === function(action) => {}
+     *
+     * @param middlewares
+     * @return
+     */
+    public static GenericStoreEnhancer applyMiddleware(Middleware... middlewares) {
+        return null;
+    }
+
+    /* compose */
 
     /**
      * Composes single-argument functions from right to left. The rightmost function can take
      * multiple arguments as it provides the signature for the resulting composite function.
      *
-     * @param func1
+     * @param funcs
      *            The functions to compose.
-     * @return A function obtained by composing the argument functions from right to left. For
-     *         example, compose(f, g, h) is identical to doing (...args) => f(g(h(...args))).
+     * @returns function obtained by composing the argument functions from right to left. For
+     *          example, `compose(f, g, h)` is identical to doing `(...args) => f(g(h(...args)))`.
      */
-
-    public static <X, A> Function<X, A> compose(Function<X, A> func1) {
-        return func1;
+    public static <R> Function<List<R>, R> composeList() {
+        return rs -> rs.get(0);
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<X, A> func2) {
-        return args -> foldRight(func2.apply(args), Collections.singletonList(func1));
+    public static <R> Function<R, R> compose() {
+        return r -> r;
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<X, A> func3) {
-        return args -> foldRight(func3.apply(args), Arrays.asList(func1, func2));
+    public static <A, R> Function<A, R> compose(Function<A, R> f1) {
+        return f1;
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
-            Function<X, A> func4) {
-        return args -> foldRight(func4.apply(args), Arrays.asList(func1, func2, func3));
+    public static <A, B, R> Function<A, R> compose(Function<B, R> f1, Function<A, B> f2) {
+        return (args) -> compose(f1).apply(f2.apply(args));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
-            Function<A, A> func4, Function<X, A> func5) {
-        return args -> foldRight(func5.apply(args), Arrays.asList(func1, func2, func3, func4));
+    public static <A, B, C, R> Function<A, R> compose(Function<C, R> f1, Function<B, C> f2, Function<A, B> f3) {
+        return (args) -> compose(f1, f2).apply(f3.apply(args));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
-            Function<A, A> func4, Function<A, A> func5, Function<X, A> func6) {
-        return args -> foldRight(func6.apply(args), Arrays.asList(func1, func2, func3, func4, func5));
+    public static <A, B, C, D, R> Function<A, R> compose(Function<D, R> f1, Function<C, D> f2, Function<B, C> f3,
+            Function<A, B> f4) {
+        return (args) -> compose(f1, f2, f3).apply(f4.apply(args));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
-            Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<X, A> func7) {
-        return args -> foldRight(func7.apply(args), Arrays.asList(func1, func2, func3, func4, func5, func6));
+    public static <A, B, C, D, E, R> Function<A, R> compose(Function<E, R> f1, Function<D, E> f2, Function<C, D> f3,
+            Function<B, C> f4, Function<A, B> f5) {
+        return (args) -> compose(f1, f2, f3, f4).apply(f5.apply(args));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
-            Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<A, A> func7, Function<X, A> func8) {
-        return args -> foldRight(func8.apply(args), Arrays.asList(func1, func2, func3, func4, func5, func6, func7));
+    public static <A, B, C, D, E, F, R> Function<A, R> compose(Function<F, R> f1, Function<E, F> f2, Function<D, E> f3,
+            Function<C, D> f4, Function<B, C> f5, Function<A, B> f6) {
+        return (args) -> compose(f1, f2, f3, f4, f5).apply(f6.apply(args));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
-            Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<A, A> func7, Function<A, A> func8,
-            Function<X, A> func9) {
-        return args -> foldRight(func9.apply(args), Arrays.asList(func1, func2, func3, func4, func5, func6, func7, func8));
+    public static <A, B, C, D, E, F, G, R> Function<A, R> compose(Function<G, R> f1, Function<F, G> f2, Function<E, F> f3,
+            Function<D, E> f4, Function<C, D> f5, Function<B, C> f6, Function<A, B> f7) {
+        return (args) -> compose(f1, f2, f3, f4, f5, f6).apply(f7.apply(args));
     }
 
-    public static <X, A> Function<X, A> compose(Function<A, A> func1, Function<A, A> func2, Function<A, A> func3,
-            Function<A, A> func4, Function<A, A> func5, Function<A, A> func6, Function<A, A> func7, Function<A, A> func8,
-            Function<A, A> func9, Function<X, A> func10) {
-        return args -> foldRight(func10.apply(args),
-                Arrays.asList(func1, func2, func3, func4, func5, func6, func7, func8, func9));
+    public static <A, B, C, D, E, F, G, H, R> Function<A, R> compose(Function<H, R> f1, Function<G, H> f2, Function<F, G> f3,
+            Function<E, F> f4, Function<D, E> f5, Function<C, D> f6, Function<B, C> f7, Function<A, B> f8) {
+        return (args) -> compose(f1, f2, f3, f4, f5, f6, f7).apply(f8.apply(args));
+    }
+
+    public static <A, B, C, D, E, F, G, H, I, R> Function<A, R> compose(Function<I, R> f1, Function<H, I> f2,
+            Function<G, H> f3, Function<F, G> f4, Function<E, F> f5, Function<D, E> f6, Function<C, D> f7, Function<B, C> f8,
+            Function<A, B> f9) {
+        return (args) -> compose(f1, f2, f3, f4, f5, f6, f7, f8).apply(f9.apply(args));
+    }
+
+    public static <A, B, C, D, E, F, G, H, I, J, R> Function<A, R> compose(Function<J, R> f1, Function<I, J> f2,
+            Function<H, I> f3, Function<G, H> f4, Function<F, G> f5, Function<E, F> f6, Function<D, E> f7, Function<C, D> f8,
+            Function<B, C> f9, Function<A, B> f10) {
+        return (args) -> compose(f1, f2, f3, f4, f5, f6, f7, f8, f9).apply(f10.apply(args));
     }
 
     @SafeVarargs
-    public static <A> Function<A, A> compose(Function<A, A>... funcs) {
-        return compose(Arrays.asList(funcs));
+    public static <R> Function<R, R> compose(Function<R, R>... funcs) {
+        return (args) -> foldRight(args, Arrays.asList(funcs));
     }
 
-    public static <A> Function<A, A> compose(List<Function<A, A>> funcs) {
-        return args -> foldRight(args, funcs);
-    }
-
-    public static <X, A> Function<X, A> compose(List<Function<A, A>> funcs, Function<X, A> func) {
-        return args -> foldRight(func.apply(args), funcs);
-    }
-
-    private static <A> A foldRight(A acc, List<Function<A, A>> xs) {
+    private static <R> R foldRight(R acc, List<Function<R, R>> xs) {
         if (xs.isEmpty()) {
             return acc;
         } else if (xs.size() == 1) {
             return xs.get(0).apply(acc);
         } else {
-            Function<A, A> last = xs.get(xs.size() - 1);
+            Function<R, R> last = xs.get(xs.size() - 1);
             return foldRight(last.apply(acc), xs.subList(0, xs.size() - 1));
         }
-    }
-
-    private static <S> S foldLeft(S acc, List<Function<S, S>> xs) {
-        if (xs.isEmpty()) {
-            return acc;
-        } else {
-            Function<S, S> head = xs.get(0);
-            return foldLeft(head.apply(acc), xs.subList(1, xs.size() - 1));
-        }
-    }
-
-    @SafeVarargs
-    public static <S extends State, A extends Action> Reducer<S, A> combineReducers(Reducer<S, A>... reducers) {
-        return combineReducers(Arrays.asList(reducers));
-    }
-
-    public static <S extends State, A extends Action> Reducer<S, A> combineReducers(Iterator<Reducer<S, A>> reducers) {
-        List<Reducer<S, A>> result = new ArrayList<>();
-        reducers.forEachRemaining(result::add);
-        return combineReducers(result);
-    }
-
-    public static <S extends State, A extends Action> Reducer<S, A> combineReducers(Collection<Reducer<S, A>> reducers) {
-        List<Reducer<S, A>> rs = new ArrayList<>(reducers);
-        RuntimeException sanityError = assertReducerSanity(rs);
-        RuntimeException errorMessage = (reducers.isEmpty()) ? new IllegalStateException(unexpectedStateShapeWarningMessage)
-                : null;
-        return (state, action) -> {
-            throwIfPresent(sanityError);
-            throwIfPresent(errorMessage);
-            return rs.stream() //
-                    .reduce(state, //
-                            (acc, reducer) -> checkReducerResult(reducer.apply(acc, action),
-                                    String.format(undefinedStateErrorMessage, action, acc)), //
-                            (acc, newState) -> newState);
-        };
-    }
-
-    private static <S extends State, A extends Action> IllegalStateException assertReducerSanity(
-            List<Reducer<S, A>> reducers) {
-        for (Reducer<S, A> reducer : reducers) {
-            S initialState = reducer.apply(null, getInitAction(reducer));
-            if (initialState == null) {
-                return new IllegalStateException(String.format(undefinedInitialStateMessage, reducer));
-            }
-        }
-        return null;
-    }
-
-    private static <S extends State, A extends Action> A getInitAction(Reducer<S, A> reducer) {
-        Class<?>[] typeArgs = TypeResolver.resolveRawArguments(Reducer.class, reducer.getClass());
-        Class<?> actionType = typeArgs[1];
-        if (actionType.isEnum()) {
-            for (A action : (A[]) actionType.getEnumConstants()) {
-                try {
-                    return (A) action.getClass().getMethod("valueOf", String.class).invoke(null, "INIT");
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        } else {
-            try {
-                return (A) actionType.newInstance();
-            } catch (Exception e) {
-                doThrow(e);
-            }
-        }
-        return null;
-    }
-
-    private static <T> T checkNotNull(T reference, String message) {
-        if (reference == null) {
-            throw new NullPointerException(message);
-        }
-        return reference;
-    }
-
-    private static <T> T checkReducerResult(T reference, String message) {
-        if (reference == null) {
-            throw new IllegalStateException(message);
-        }
-        return reference;
-    }
-
-    private static void throwIfPresent(Exception e) {
-        if (e != null) {
-            doThrow(e);
-        }
-    }
-
-    private static void doThrow(Exception e) {
-        Redux.<RuntimeException>doThrow0(e);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <E extends Exception> void doThrow0(Exception e) throws E {
-        throw (E) e;
     }
 
 }
