@@ -39,7 +39,7 @@ public class CombineRudecersTest {
                     if (action.type == push) {
                         List<String> newState = new ArrayList<>(state.size() + 1);
                         newState.addAll(state);
-                        newState.add(action.getValue(String.class));
+                        newState.add(action.getValue(String.class).orElse(null));
                         return newState;
                     }
                     return state;
@@ -118,16 +118,17 @@ public class CombineRudecersTest {
 
     @Test
     public void catchesErrorThrownInReducerWhenInitializingAndRethrow() {
+        String errorMessage = "Error thrown in reducer";
         Reducer reducer = combineReducers(ReducersMapObject.builder() //
                 .add(throwingReducer).withStateType(Object.class) //
                 .reducer((state, action) -> {
-                    throw new UnsupportedOperationException("Error thrown in reducer");
+                    throw new UnsupportedOperationException(errorMessage);
                 }).build());
 
         try {
             reducer.apply(State.empty(), null);
         } catch (UnsupportedOperationException e) {
-            e.getMessage().equals("Error thrown in reducer");
+            assertEquals(errorMessage, e.getMessage());
         }
     }
 

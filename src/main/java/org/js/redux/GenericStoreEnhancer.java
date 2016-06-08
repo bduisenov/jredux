@@ -6,6 +6,6 @@ package org.js.redux;
 @FunctionalInterface
 public interface GenericStoreEnhancer {
 
-    <S> StoreEnhancerStoreCreator<S> apply(StoreEnhancerStoreCreator<S> next);
+    StoreEnhancerStoreCreator apply(StoreEnhancerStoreCreator next);
 
 }

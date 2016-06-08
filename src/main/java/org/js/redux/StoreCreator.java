@@ -3,7 +3,11 @@ package org.js.redux;
 /**
  * Created by bduisenov on 05/06/16.
  */
-public interface StoreCreator {
+public class StoreCreator {
+
+    private StoreCreator() {
+        //
+    }
 
     /**
      * A store creator is a function that creates a Redux store. Like with dispatching function, we
@@ -13,7 +17,9 @@ public interface StoreCreator {
      * @param <S>
      *            S State object type.
      */
-    //<S> Store<S> createStore(Reducer<S> add);
+    public static Store createStore(Reducer add) {
+        return null;
+    }
 
     /**
      * A store creator is a function that creates a Redux store. Like with dispatching function, we
@@ -23,7 +29,9 @@ public interface StoreCreator {
      * @param <S>
      *            S State object type.
      */
-    //<S> Store<S> createStore(Reducer<S> add, StoreEnhancer<S> enhancer);
+    public static Store createStore(Reducer add, StoreEnhancer enhancer) {
+        return null;
+    }
 
     /**
      * A store creator is a function that creates a Redux store. Like with dispatching function, we
@@ -33,7 +41,9 @@ public interface StoreCreator {
      * @param <S>
      *            S State object type.
      */
-    //<S> Store<S> createStore(Reducer<S> add, S preloadedState);
+    public static Store createStore(Reducer add, State preloadedState) {
+        return null;
+    }
 
     /**
      * A store creator is a function that creates a Redux store. Like with dispatching function, we
@@ -43,6 +53,8 @@ public interface StoreCreator {
      * @param <S>
      *            S State object type.
      */
-    //<S> Store<S> createStore(Reducer<S> add, S preloadedState, StoreEnhancer<S> enhancer);
+    public static Store createStore(Reducer add, State preloadedState, StoreEnhancer enhancer) {
+        return null;
+    }
 
 }

@@ -4,6 +4,7 @@ import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -36,20 +37,22 @@ public final class Action {
         this.values = values;
     }
 
-    public <T> T getValue(Class<T> type) {
+    public <T> Optional<T> getValue(Class<T> type) {
+        T result = null;
         Object value = values.get(new AbstractMap.SimpleImmutableEntry<>(SINGLE_VALUE, type));
         if (value != null) {
-            return type.cast(value);
+            result = type.cast(value);
         }
-        return null;
+        return Optional.ofNullable(result);
     }
 
-    public <T> T getValue(String key, Class<T> type) {
+    public <T> Optional<T> getValue(String key, Class<T> type) {
+        T result = null;
         Object value = values.get(new AbstractMap.SimpleImmutableEntry<>(key, type));
         if (value != null) {
-            return type.cast(value);
+            result = type.cast(value);
         }
-        return null;
+        return Optional.ofNullable(result);
     }
 
     public static Action of() {
@@ -92,13 +95,9 @@ public final class Action {
     }
 
     public static Action of(Enum<?> type, Consumer<Builder> vals) {
-        HashMap<String, Object> map = new HashMap<>();
-        vals.accept(map::put);
-
         HashMap<Map.Entry<String, Class<?>>, Object> xs = new HashMap<>();
-        map.forEach((k, v) -> {
-            xs.put(new AbstractMap.SimpleImmutableEntry<>(k, v.getClass()), v);
-        });
+        vals.accept((key, val) -> //
+            xs.put(new AbstractMap.SimpleImmutableEntry<>(key, val.getClass()), val));
         return new Action(type, xs);
     }
 

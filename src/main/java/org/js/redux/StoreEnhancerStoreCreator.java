@@ -3,9 +3,9 @@ package org.js.redux;
 /**
  * Created by bduisenov on 05/06/16.
  */
-//@FunctionalInterface
-public interface StoreEnhancerStoreCreator<S> {
+@FunctionalInterface
+public interface StoreEnhancerStoreCreator {
 
-    //Store<S> apply(Reducer<S> add, S preloadedState);
+    Store apply(Reducer add, State preloadedState);
 
 }

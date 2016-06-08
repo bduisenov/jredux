@@ -7,7 +7,7 @@ package org.js.redux;
  * @param <S>
  *            State object type.
  */
-public interface Store<S> {
+public interface Store {
 
     /**
      * Dispatches an action. It is the only way to trigger a state change.
@@ -33,14 +33,14 @@ public interface Store<S> {
      *          Note that, if you use a custom middleware, it may wrap `dispatch()` to return
      *          something else (for example, a Promise you can await).
      */
-    <A extends Action> Dispatch<A> dispatch(A action);
+    Dispatch<Action> dispatch(Action action);
 
     /**
      * Reads the state tree managed by the store.
      *
      * @returns The current state tree of your application.
      */
-    S getState();
+    State getState();
 
     /**
      * Adds a change listener. It will be called any time an action is dispatched, and some part of
@@ -74,7 +74,7 @@ public interface Store<S> {
      *
      * @param nextReducer The add for the store to use instead.
      */
-    //replaceReducer(nextReducer: Reducer<S>): void;
+    void replaceReducer(Reducer nextReducer);
 
     StoreCreator createStore();
 
