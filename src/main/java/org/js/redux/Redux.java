@@ -1,5 +1,6 @@
 package org.js.redux;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,12 +13,20 @@ import java.util.function.Function;
  */
 public class Redux {
 
-    private static String undefinedStateErrorMessage = "Given action \"%s\", reducer \"%s\" returned undefined. "
+    private static final String undefinedStateErrorMessage = "Given action \"%s\", reducer \"%s\" returned undefined. "
             + "To ignore an action, you must explicitly return the previous state.";
 
-    private static String unexpectedStateShapeWarningMessage = "Store does not have a valid reducer. Make sure the argument passed "
+    private static final String unexpectedStateShapeWarningMessage = "Store does not have a valid reducer. Make sure the argument passed "
             + "to combineReducers is an object whose values are reducers.";
 
+    private static final String undefinedInitialStateMessage = "Reducer \"%s\" returned undefined during initialization. "
+            + "If the state passed to the reducer is undefined, you must "
+            + "explicitly return the initial state. The initial state may not be undefined.";
+
+    private enum ActionTypes {
+        INIT;
+    }
+    
     private Redux() {
         //
     }
@@ -85,7 +94,7 @@ public class Redux {
         //FIXME
     }
 
-    private static <A extends Action> String getUnexpectedStateShapeWarningMessage(State state,
+    private static String getUnexpectedStateShapeWarningMessage(State state,
             Map<Enum<?>, BiFunction<Object, Action, Object>> reducers, Action action) {
         if (reducers.isEmpty()) {
             return unexpectedStateShapeWarningMessage;
@@ -93,13 +102,27 @@ public class Redux {
         return null;
     }
 
-    private static <A extends Action> String getUndefinedStateErrorMessage(Enum<?> key, Action action) {
+    private static String getUndefinedStateErrorMessage(Enum<?> key, Action action) {
         String actionName = (action != null && action.type != null) ? action.type.toString() : "an action";
         return String.format(undefinedStateErrorMessage, actionName, key);
     }
 
-    private static <A extends Action> IllegalStateException assertReducerSanity(Map<Enum<?>, BiFunction<Object, A, Object>> finalReducers) {
-        return null;
+    private static IllegalStateException assertReducerSanity(Map<Enum<?>, BiFunction<Object, Action, Object>> finalReducers) {
+        List<IllegalStateException> exceptions = new ArrayList<>();
+        finalReducers.forEach((key, reducer) -> {
+            Object initialValue = reducer.apply(null, Action.of(ActionTypes.INIT));
+            if (initialValue == null) {
+                IllegalStateException e = new IllegalStateException(String.format(undefinedInitialStateMessage, key));
+                exceptions.add(e);
+            }
+        });
+        if (exceptions.isEmpty()) {
+            return null;
+        } else {
+            IllegalStateException e = new IllegalStateException();
+            exceptions.forEach(e::addSuppressed);
+            return e;
+        }
     }
 
     /**
