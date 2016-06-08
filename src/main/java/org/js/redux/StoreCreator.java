@@ -84,8 +84,21 @@ public class StoreCreator {
 
             @Override
             public Subscription subscribe(Listener listener) {
+                if (listener == null) {
+                    throw new NullPointerException("Expected listener must not be null.");
+                }
                 nextListeners.add(listener);
-                return () -> nextListeners.remove(listener);
+                return new Subscription() {
+                    boolean isSubscribed = true;
+                    @Override
+                    public void unsubscribe() {
+                        if (!isSubscribed) {
+                            return;
+                        }
+                        isSubscribed = false;
+                        nextListeners.remove(listener);
+                    }
+                };
             }
 
             @Override

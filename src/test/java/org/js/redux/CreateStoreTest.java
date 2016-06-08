@@ -125,4 +125,37 @@ public class CreateStoreTest {
         verify(listenerB, times(2)).onDispatch();
     }
 
+    @Test
+    public void onlyRemovesListenerOnceWhenUnsubscribeIsCalled() {
+        Store store = createStore(Reducers::todos);
+        Listener listenerA = mock(Listener.class);
+        Listener listenerB = mock(Listener.class);
+
+        Subscription unsubscribeA = store.subscribe(listenerA);
+        store.subscribe(listenerB);
+
+        unsubscribeA.unsubscribe();
+        unsubscribeA.unsubscribe();
+
+        store.dispatch(unknownAction());
+        verify(listenerA, never()).onDispatch();
+        verify(listenerB).onDispatch();
+    }
+
+    @Test
+    public void onlyRemovesRelevantListenerWhenUnsubscribeIsCalled() {
+        Store store = createStore(Reducers::todos);
+        Listener listener = mock(Listener.class);
+        store.subscribe(listener);
+
+        Subscription unsubscribeSecond = store.subscribe(listener);
+
+        unsubscribeSecond.unsubscribe();
+        unsubscribeSecond.unsubscribe();
+
+        store.dispatch(unknownAction());
+        verify(listener).onDispatch();
+
+    }
+
 }

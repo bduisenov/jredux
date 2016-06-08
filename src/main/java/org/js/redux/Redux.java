@@ -74,7 +74,7 @@ public class Redux {
 
                 Class<?> stateType = reducers.getTypes().get(key);
 
-                Object previousStateForKey = state.get(key, stateType);
+                Object previousStateForKey = state.get(key, stateType).orElse(null);
                 Object nextStateForKey = reducer.apply(previousStateForKey, action);
                 if (nextStateForKey == null) {
                     String errorMessage = getUndefinedStateErrorMessage(key, action);
