@@ -25,55 +25,7 @@ public class StoreCreator {
      *            S State object type.
      */
     public static Store createStore(Reducer reducer) {
-        Store store = new Store() {
-
-            private Reducer currentReducer = reducer;
-
-            private State currentState;
-
-            private List<Listener> currentListeners = new ArrayList<>();
-
-            private boolean isDispatching = false;
-
-            @Override
-            public Action dispatch(Action action) {
-                if (action.type == null) {
-                    throw new NullPointerException(undefinedActionTypeMessage);
-                }
-                if (isDispatching) {
-                    throw new UnsupportedOperationException(illegalUsageOfReducerMessage);
-                }
-                try {
-                    isDispatching = true;
-                    currentState = currentReducer.apply(currentState, action);
-                } finally {
-                    isDispatching = false;
-                }
-                return action;
-            }
-
-            @Override
-            public State getState() {
-                return currentState;
-            }
-
-            @Override
-            public Subscription subscribe(Listener listener) {
-                return null;
-            }
-
-            @Override
-            public void replaceReducer(Reducer nextReducer) {
-
-            }
-
-            @Override
-            public StoreCreator createStore() {
-                return null;
-            }
-        };
-        store.dispatch(Action.of(Redux.ActionTypes.INIT));
-        return store;
+        return createStore(reducer, (State) null);
     }
 
     /**
@@ -84,7 +36,7 @@ public class StoreCreator {
      * @param <S>
      *            S State object type.
      */
-    public static Store createStore(Reducer add, StoreEnhancer enhancer) {
+    public static Store createStore(Reducer reducer, StoreEnhancer enhancer) {
         return null;
     }
 
@@ -136,7 +88,8 @@ public class StoreCreator {
 
             @Override
             public void replaceReducer(Reducer nextReducer) {
-
+                currentReducer = nextReducer;
+                dispatch(Action.of(Redux.ActionTypes.INIT));
             }
 
             @Override

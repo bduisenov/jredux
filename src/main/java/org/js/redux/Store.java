@@ -66,7 +66,7 @@ public interface Store {
     Subscription subscribe(Listener listener);
 
     /**
-     * Replaces the add currently used by the store to calculate the state.
+     * Replaces the reducer currently used by the store to calculate the state.
      *
      * You might need this if your app implements code splitting and you want to
      * load some of the reducers dynamically. You might also need this if you
