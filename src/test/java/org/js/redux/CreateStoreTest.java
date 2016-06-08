@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.js.redux.helpers.ActionCreators;
 import org.js.redux.helpers.Reducers;
@@ -167,14 +169,12 @@ public class CreateStoreTest {
         Listener listenerC = mock(Listener.class);
 
         store.subscribe(listenerA);
-        Subscription unSubB = store.subscribe(new ListenerWithItsSubscription() {
-
-            @Override
-            public void onDispatch() {
-                listenerB.onDispatch();
-                subscription.unsubscribe();
-            }
+        AtomicReference<Subscription> unSubBRef = new AtomicReference<>();
+        Subscription unSubB = store.subscribe(() -> {
+            listenerB.onDispatch();
+            unSubBRef.get().unsubscribe();
         });
+        unSubBRef.set(unSubB);
         store.subscribe(listenerC);
 
         store.dispatch(unknownAction());
@@ -214,7 +214,6 @@ public class CreateStoreTest {
         verify(listener3).onDispatch();
     }
 
-    boolean listener3Added = false;
     @Test
     public void delaysSubscribeUntilTheEndOfCurrentDispatch() {
         Store store = createStore(Reducers::todos);
@@ -222,10 +221,11 @@ public class CreateStoreTest {
         Listener listener1 = mock(Listener.class);
         Listener listener2 = mock(Listener.class);
         Listener listener3 = mock(Listener.class);
-
+        // as a workaround with java's effectively final constraint
+        AtomicBoolean listener3Added = new AtomicBoolean(false);
         Runnable maybeAddThirdListener = () -> {
-            if (!listener3Added) {
-                listener3Added = true;
+            if (!listener3Added.get()) {
+                listener3Added.set(true);
                 store.subscribe(listener3::onDispatch);
             }
         };
