@@ -9,8 +9,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import org.js.redux.helpers.ActionCreators;
 import org.js.redux.helpers.Reducers;
@@ -181,6 +183,35 @@ public class CreateStoreTest {
         verify(listenerA, times(2)).onDispatch();
         verify(listenerB).onDispatch();
         verify(listenerC, times(2)).onDispatch();
+    }
+
+    @Test
+    public void delaysUnsubscribeUntilTheEndOfCurrentDispatch() {
+        Store store = createStore(Reducers::todos);
+
+        List<Subscription> unsubscribeHandles = new ArrayList<>();
+        Runnable doUnsubscribeAll = () -> unsubscribeHandles.forEach(Subscription::unsubscribe);
+
+        Listener listener1 = mock(Listener.class);
+        Listener listener2 = mock(Listener.class);
+        Listener listener3 = mock(Listener.class);
+
+        unsubscribeHandles.add(store.subscribe(listener1::onDispatch));
+        unsubscribeHandles.add(store.subscribe(() -> {
+            listener2.onDispatch();
+            doUnsubscribeAll.run();
+        }));
+        unsubscribeHandles.add(store.subscribe(listener3::onDispatch));
+
+        store.dispatch(unknownAction());
+        verify(listener1).onDispatch();
+        verify(listener2).onDispatch();
+        verify(listener3).onDispatch();
+
+        store.dispatch(unknownAction());
+        verify(listener1).onDispatch();
+        verify(listener2).onDispatch();
+        verify(listener3).onDispatch();
     }
 
 }
