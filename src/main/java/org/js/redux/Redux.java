@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import com.sun.istack.internal.Nullable;
+
 /**
  * Created by bduisenov on 05/06/16.
  */
@@ -84,7 +86,7 @@ public class Redux {
                     nextState.put(key, nextStateForKey);
                     hasChanged = hasChanged || nextStateForKey != previousStateForKey;
                 }
-                return hasChanged ? new State(nextState) : state;
+                return hasChanged ? State.of(nextState) : state;
             }
 
         };
@@ -94,6 +96,7 @@ public class Redux {
         //FIXME
     }
 
+    @Nullable
     private static String getUnexpectedStateShapeWarningMessage(State state,
             Map<Enum<?>, BiFunction<Object, Action, Object>> reducers, Action action) {
         if (reducers.isEmpty()) {
@@ -107,6 +110,7 @@ public class Redux {
         return String.format(undefinedStateErrorMessage, actionName, key);
     }
 
+    @Nullable
     private static IllegalStateException assertReducerSanity(Map<Enum<?>, BiFunction<Object, Action, Object>> finalReducers) {
         List<IllegalStateException> exceptions = new ArrayList<>();
         finalReducers.forEach((key, reducer) -> {

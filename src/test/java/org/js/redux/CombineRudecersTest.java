@@ -121,9 +121,12 @@ public class CombineRudecersTest {
     public void maintainsReferentialEqualityIfTheReducersItIsCombiningDo() {
         Reducer reducer = combineReducers(ReducersMapObject.builder() //
                 .add(child1).withInitialValue(new Object()) //
-                .reducer((state, action) -> state).add(child2).withInitialValue(new Object()) //
-                .reducer((state, action) -> state).add(child3).withInitialValue(new Object()) //
-                .reducer((state, action) -> state).build());
+                .reducer((state, action) -> state) //
+                .add(child2).withInitialValue(new Object()) //
+                .reducer((state, action) -> state) //
+                .add(child3).withInitialValue(new Object()) //
+                .reducer((state, action) -> state) //
+                .build());
         State initialState = reducer.apply(null, Action.of());
         assertSame(initialState, reducer.apply(initialState, Action.of(FOO)));
     }
@@ -132,14 +135,17 @@ public class CombineRudecersTest {
     public void doesNotHaveReferentialEqualityIfOneOfTheReducersChangesSomething() {
         Reducer reducer = combineReducers(ReducersMapObject.builder() //
                 .add(child1).withInitialValue(new Object()) //
-                .reducer((state, action) -> state).add(child2).withInitialValue(0) //
+                .reducer((state, action) -> state) //
+                .add(child2).withInitialValue(0) //
                 .reducer((state, action) -> {
                     if (action.type != null && action.type.toString().equals("increment")) {
                         return state + 1;
                     }
                     return state;
-                }).add(child3).withInitialValue(new Object()) //
-                .reducer((state, action) -> state).build());
+                }) //
+                .add(child3).withInitialValue(new Object()) //
+                .reducer((state, action) -> state) //
+                .build());
         State initialState = reducer.apply(null, Action.of());
         assertNotSame(initialState, reducer.apply(initialState, Action.of(increment)));
     }

@@ -11,7 +11,7 @@ public final class State {
 
     private final Map<Enum<?>, Object> state;
 
-    State(Map<Enum<?>, Object> state) {
+    private State(Map<Enum<?>, Object> state) {
         this.state = state;
     }
 
@@ -27,6 +27,10 @@ public final class State {
 
     public static State empty() {
         return new State(Collections.emptyMap());
+    }
+
+    public static State of(Map<Enum<?>, Object> state) {
+        return new State(state);
     }
 
     public static State of(Enum<?> k1, Object v1) {

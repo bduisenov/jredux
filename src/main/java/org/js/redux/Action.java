@@ -4,6 +4,7 @@ import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * An *action* is a plain object that represents an intention to change the state. Actions are the
@@ -86,4 +87,48 @@ public final class Action {
         }});
     }
 
+    public interface Builder {
+        void add(String key, Object val);
+    }
+
+    public static Action of(Enum<?> type, Consumer<Builder> vals) {
+        HashMap<String, Object> map = new HashMap<>();
+        vals.accept(map::put);
+
+        HashMap<Map.Entry<String, Class<?>>, Object> xs = new HashMap<>();
+        map.forEach((k, v) -> {
+            xs.put(new AbstractMap.SimpleImmutableEntry<>(k, v.getClass()), v);
+        });
+        return new Action(type, xs);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        Action action = (Action) o;
+
+        if (type != null ? !type.equals(action.type) : action.type != null)
+            return false;
+        return values != null ? values.equals(action.values) : action.values == null;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = type != null ? type.hashCode() : 0;
+        result = 31 * result + (values != null ? values.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "Action{" +
+                "type=" + type +
+                ", values=" + values +
+                '}';
+    }
 }
