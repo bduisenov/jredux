@@ -2,7 +2,12 @@ package org.js.redux;
 
 import static org.js.redux.StoreCreator.createStore;
 import static org.js.redux.helpers.ActionCreators.addTodo;
+import static org.js.redux.helpers.ActionCreators.unknownAction;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -70,6 +75,54 @@ public class CreateStoreTest {
                 new Todo(1, "Hello"), //
                 new Todo(2, "World"), //
                 new Todo(4, "Surely"))), store.getState());
+    }
+
+    @Test
+    public void supportsMultipleSubscriptions() {
+        Store store = createStore(Reducers::todos);
+        Listener listenerA = mock(Listener.class);
+        Listener listenerB = mock(Listener.class);
+
+        Subscription unsubscribeA = store.subscribe(listenerA);
+        store.dispatch(unknownAction());
+        verify(listenerA).onDispatch();
+        verify(listenerB, never()).onDispatch();
+
+        store.dispatch(unknownAction());
+        verify(listenerA, times(2)).onDispatch();
+        verify(listenerB, never()).onDispatch();
+
+        Subscription unsubscribeB = store.subscribe(listenerB);
+        verify(listenerA, times(2)).onDispatch();
+        verify(listenerB, never()).onDispatch();
+
+        store.dispatch(unknownAction());
+        verify(listenerA, times(3)).onDispatch();
+        verify(listenerB).onDispatch();
+
+        unsubscribeA.unsubscribe();
+        verify(listenerA, times(3)).onDispatch();
+        verify(listenerB).onDispatch();
+
+        store.dispatch(unknownAction());
+        verify(listenerA, times(3)).onDispatch();
+        verify(listenerB, times(2)).onDispatch();
+
+        unsubscribeB.unsubscribe();
+        verify(listenerA, times(3)).onDispatch();
+        verify(listenerB, times(2)).onDispatch();
+
+        store.dispatch(unknownAction());
+        verify(listenerA, times(3)).onDispatch();
+        verify(listenerB, times(2)).onDispatch();
+
+        unsubscribeA = store.subscribe(listenerA);
+        verify(listenerA, times(3)).onDispatch();
+        verify(listenerB, times(2)).onDispatch();
+
+        store.dispatch(unknownAction());
+        verify(listenerA, times(4)).onDispatch();
+        verify(listenerB, times(2)).onDispatch();
     }
 
 }

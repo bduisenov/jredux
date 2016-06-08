@@ -56,7 +56,7 @@ public class StoreCreator {
             private State currentState = preloadedState;
 
             private List<Listener> currentListeners = new ArrayList<>();
-
+            private List<Listener> nextListeners = currentListeners;
             private boolean isDispatching = false;
 
             @Override
@@ -73,6 +73,7 @@ public class StoreCreator {
                 } finally {
                     isDispatching = false;
                 }
+                (currentListeners = nextListeners).forEach(Listener::onDispatch);
                 return action;
             }
 
@@ -83,7 +84,8 @@ public class StoreCreator {
 
             @Override
             public Subscription subscribe(Listener listener) {
-                return null;
+                nextListeners.add(listener);
+                return () -> nextListeners.remove(listener);
             }
 
             @Override
