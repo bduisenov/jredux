@@ -1,8 +1,13 @@
 package org.js.redux;
 
 import static org.js.redux.StoreCreator.createStore;
+import static org.js.redux.helpers.ActionCreators.addTodo;
 import static org.junit.Assert.assertEquals;
 
+import java.util.Arrays;
+import java.util.Collections;
+
+import org.js.redux.helpers.ActionCreators;
 import org.js.redux.helpers.Reducers;
 import org.js.redux.helpers.Todo;
 import org.junit.Test;
@@ -20,6 +25,21 @@ public class CreateStoreTest {
     public void passesTheInitialActionAndTheInitialState() {
         Store store = createStore(Reducers::todos, State.of(new Todo(1, "Hello")));
         assertEquals(new Todo(1, "Hello"), store.getState().get().get());
+    }
+
+    @Test
+    public void appliesTheReducerToThePreviousState() {
+        Store store = createStore(Reducers::todos);
+        assertEquals(State.empty(), store.getState());
+
+        store.dispatch(ActionCreators.unknownAction());
+        assertEquals(State.empty(), store.getState());
+
+        store.dispatch(addTodo("Hello"));
+        assertEquals(State.of(Collections.singletonList(new Todo(1, "Hello"))), store.getState());
+
+        store.dispatch(addTodo("World"));
+        assertEquals(State.of(Arrays.asList(new Todo(1, "Hello"), new Todo(2, "World"))), store.getState());
     }
 
 }

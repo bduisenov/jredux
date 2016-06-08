@@ -25,6 +25,7 @@ public class Reducers {
     }
 
     public static State todos(State state, Action action) {
+        state = (state == null) ? State.empty() : state;
         if (action.type == ADD_TODO) {
             List<Todo> todos = state.<List<Todo>>get().orElse(Collections.emptyList());
             List<Todo> newTodos = new ArrayList<>(todos.size() + 1);
@@ -36,6 +37,7 @@ public class Reducers {
     }
 
     public static State todosReverse(State state, Action action) {
+        state = (state == null) ? State.empty() : state;
         if (action.type == ADD_TODO) {
             List<Todo> todos = state.<List<Todo>>get().orElse(Collections.emptyList());
             List<Todo> newTodos = new ArrayList<>(todos.size() + 1);
@@ -47,6 +49,7 @@ public class Reducers {
     }
 
     public static List dispatchInTheMiddleOfReducer(List state, Action action) {
+        state = state == null ? Collections.emptyList() : state;
         if (action.type == DISPATCH_IN_MIDDLE) {
             action.getValue("boundDispatchFn", Supplier.class).ifPresent(Supplier::get);
         }
@@ -54,6 +57,7 @@ public class Reducers {
     }
 
     public static List errorThrowingReducer(List state, Action action) {
+        state = state == null ? Collections.emptyList() : state;
         if (action.type == THROW_ERROR) {
             throw new RuntimeException();
         }

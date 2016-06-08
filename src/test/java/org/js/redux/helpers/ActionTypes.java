@@ -5,6 +5,6 @@ package org.js.redux.helpers;
  */
 public enum ActionTypes {
 
-    ADD_TODO, DISPATCH_IN_MIDDLE, THROW_ERROR
+    ADD_TODO, DISPATCH_IN_MIDDLE, THROW_ERROR, UNKNOWN_ACTION
 
 }
