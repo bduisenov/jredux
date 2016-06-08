@@ -16,8 +16,8 @@ package org.js.redux;
  * actions or async actions before passing them to the next middleware.
  */
 @FunctionalInterface
-public interface Dispatch<S> {
+public interface Dispatch {
 
-    <A extends Action> A apply(A action);
+    Action apply(Action action);
 
 }

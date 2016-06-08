@@ -33,7 +33,7 @@ public interface Store {
      *          Note that, if you use a custom middleware, it may wrap `dispatch()` to return
      *          something else (for example, a Promise you can await).
      */
-    Dispatch<Action> dispatch(Action action);
+    Action dispatch(Action action);
 
     /**
      * Reads the state tree managed by the store.

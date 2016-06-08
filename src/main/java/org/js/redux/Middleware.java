@@ -12,6 +12,6 @@ import java.util.function.Function;
  */
 public interface Middleware {
 
-    <S> Function<Dispatch<S>, Dispatch<S>> apply(MiddlewareAPI<S> api);
+    <S> Function<Dispatch, Dispatch> apply(MiddlewareAPI<S> api);
 
 }

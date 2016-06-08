@@ -25,7 +25,7 @@ public class Redux {
             + "If the state passed to the reducer is undefined, you must "
             + "explicitly return the initial state. The initial state may not be undefined.";
 
-    private enum ActionTypes {
+    enum ActionTypes {
         INIT;
     }
     
@@ -53,42 +53,37 @@ public class Redux {
     public static <R extends ReducersMapObject> Reducer combineReducers(R reducers) {
         RuntimeException sanityError = assertReducerSanity(reducers.getReducers());
 
-        return new Reducer() {
-
-            @Override
-            public State apply(State state, Action action) {
-                if (state == null) {
-                    state = State.empty();
-                }
-                if (sanityError != null) {
-                    throw sanityError;
-                }
-
-                String warningMessage = getUnexpectedStateShapeWarningMessage(state, reducers.getReducers(), action);
-                if (warningMessage != null) {
-                    warning(warningMessage);
-                }
-
-                boolean hasChanged = false;
-                Map<Enum<?>, Object> nextState = new LinkedHashMap<>();
-                for (Map.Entry<Enum<?>, BiFunction<Object, Action, Object>> entry : reducers.getReducers().entrySet()) {
-                    Enum<?> key = entry.getKey();
-                    BiFunction<Object, Action, Object> reducer = entry.getValue();
-
-                    Class<?> stateType = reducers.getTypes().get(key);
-
-                    Object previousStateForKey = state.get(key, stateType);
-                    Object nextStateForKey = reducer.apply(previousStateForKey, action);
-                    if (nextStateForKey == null) {
-                        String errorMessage = getUndefinedStateErrorMessage(key, action);
-                        throw new RuntimeException(errorMessage);
-                    }
-                    nextState.put(key, nextStateForKey);
-                    hasChanged = hasChanged || nextStateForKey != previousStateForKey;
-                }
-                return hasChanged ? State.of(nextState) : state;
+        return (state, action) -> {
+            if (state == null) {
+                state = State.empty();
+            }
+            if (sanityError != null) {
+                throw sanityError;
             }
 
+            String warningMessage = getUnexpectedStateShapeWarningMessage(state, reducers.getReducers(), action);
+            if (warningMessage != null) {
+                warning(warningMessage);
+            }
+
+            boolean hasChanged = false;
+            Map<Enum<?>, Object> nextState = new LinkedHashMap<>();
+            for (Map.Entry<Enum<?>, BiFunction<Object, Action, Object>> entry : reducers.getReducers().entrySet()) {
+                Enum<?> key = entry.getKey();
+                BiFunction<Object, Action, Object> reducer = entry.getValue();
+
+                Class<?> stateType = reducers.getTypes().get(key);
+
+                Object previousStateForKey = state.get(key, stateType);
+                Object nextStateForKey = reducer.apply(previousStateForKey, action);
+                if (nextStateForKey == null) {
+                    String errorMessage = getUndefinedStateErrorMessage(key, action);
+                    throw new RuntimeException(errorMessage);
+                }
+                nextState.put(key, nextStateForKey);
+                hasChanged = hasChanged || nextStateForKey != previousStateForKey;
+            }
+            return hasChanged ? State.of(nextState) : state;
         };
     }
 

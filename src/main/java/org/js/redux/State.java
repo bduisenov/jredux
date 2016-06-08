@@ -28,7 +28,7 @@ public final class State {
         T result = null;
         Object value = state.get(KEY.SINGLE_KEY);
         if (value != null) {
-            result = (T) new TypeToken<T>() {}.getRawType().cast(value);
+            result = (T)TypeToken.of(value.getClass()).getRawType().cast(value);
         }
         return Optional.ofNullable(result);
     }
