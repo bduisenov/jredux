@@ -214,4 +214,35 @@ public class CreateStoreTest {
         verify(listener3).onDispatch();
     }
 
+    boolean listener3Added = false;
+    @Test
+    public void delaysSubscribeUntilTheEndOfCurrentDispatch() {
+        Store store = createStore(Reducers::todos);
+
+        Listener listener1 = mock(Listener.class);
+        Listener listener2 = mock(Listener.class);
+        Listener listener3 = mock(Listener.class);
+
+        Runnable maybeAddThirdListener = () -> {
+            if (!listener3Added) {
+                listener3Added = true;
+                store.subscribe(listener3::onDispatch);
+            }
+        };
+        store.subscribe(listener1::onDispatch);
+        store.subscribe(() -> {
+            listener2.onDispatch();
+            maybeAddThirdListener.run();
+        });
+        store.dispatch(unknownAction());
+        verify(listener1).onDispatch();
+        verify(listener2).onDispatch();
+        verify(listener3, never()).onDispatch();
+
+        store.dispatch(unknownAction());
+        verify(listener1, times(2)).onDispatch();
+        verify(listener2, times(2)).onDispatch();
+        verify(listener3).onDispatch();
+    }
+
 }
