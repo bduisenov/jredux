@@ -14,6 +14,7 @@ import static org.js.redux.Redux.combineReducers;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
@@ -43,6 +44,7 @@ public class CombineRudecersTest {
                     }
                     return state;
                 }).build());
+
         State s1 = reducer.apply(State.empty(), Action.of(increment));
         assertEquals(State.of(counter, 1, stack, Collections.emptyList()), s1);
         State s2 = reducer.apply(s1, Action.of(push, "a"));
@@ -62,33 +64,36 @@ public class CombineRudecersTest {
                                 return state - 1;
                             case "whatever":
                                 return null;
+                            default:
+                                return state;
                         }
                     }
                     return null;
                 }).build());
+
         try {
             reducer.apply(State.of(counter, 0), Action.of(whatever));
             fail();
         } catch (Exception e) {
-            e.printStackTrace();
+            assertTrue(e.getMessage().matches(".*whatever.*counter.*"));
         }
 
         try {
             reducer.apply(State.of(counter, 0), null);
             fail();
         } catch (Exception e) {
-            e.printStackTrace();
+            assertTrue(e.getMessage().matches(".*counter.*an action.*"));
         }
 
         try {
             reducer.apply(State.of(counter, 0), Action.of());
             fail();
         } catch (Exception e) {
-            e.printStackTrace();
+            assertTrue(e.getMessage().matches(".*counter.*an action.*"));
         }
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void throwsAnErrorOnFirstCallIfAReducerReturnsUndefinedInitializing() {
         Reducer reducer = combineReducers(ReducersMapObject.builder() //
                 .add(counter).withStateType(Integer.class) //
@@ -102,17 +107,28 @@ public class CombineRudecersTest {
                             return state;
                     }
                 }).build());
-        reducer.apply(State.empty(), null);
+
+        try {
+            reducer.apply(State.empty(), null);
+        } catch (IllegalStateException e) {
+            assertTrue(e.getSuppressed()[0].getMessage().matches(".*counter.*initialization.*"));
+        }
+
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void catchesErrorThrownInReducerWhenInitializingAndRethrow() {
         Reducer reducer = combineReducers(ReducersMapObject.builder() //
                 .add(throwingReducer).withStateType(Object.class) //
                 .reducer((state, action) -> {
                     throw new UnsupportedOperationException("Error thrown in reducer");
                 }).build());
-        reducer.apply(State.empty(), null);
+
+        try {
+            reducer.apply(State.empty(), null);
+        } catch (UnsupportedOperationException e) {
+            e.getMessage().equals("Error thrown in reducer");
+        }
     }
 
     //TODO allows a symbol to be used as an action type
@@ -127,6 +143,7 @@ public class CombineRudecersTest {
                 .add(child3).withInitialValue(new Object()) //
                 .reducer((state, action) -> state) //
                 .build());
+
         State initialState = reducer.apply(null, Action.of());
         assertSame(initialState, reducer.apply(initialState, Action.of(FOO)));
     }
@@ -146,6 +163,7 @@ public class CombineRudecersTest {
                 .add(child3).withInitialValue(new Object()) //
                 .reducer((state, action) -> state) //
                 .build());
+
         State initialState = reducer.apply(null, Action.of());
         assertNotSame(initialState, reducer.apply(initialState, Action.of(increment)));
     }

@@ -51,7 +51,7 @@ public class Redux {
      *         state object with the same shape.
      */
     public static <R extends ReducersMapObject> Reducer combineReducers(R reducers) {
-        IllegalStateException sanityError = assertReducerSanity(reducers.getReducers());
+        RuntimeException sanityError = assertReducerSanity(reducers.getReducers());
 
         return new Reducer() {
 
@@ -111,22 +111,26 @@ public class Redux {
     }
 
     @Nullable
-    private static IllegalStateException assertReducerSanity(Map<Enum<?>, BiFunction<Object, Action, Object>> finalReducers) {
-        List<IllegalStateException> exceptions = new ArrayList<>();
-        finalReducers.forEach((key, reducer) -> {
-            Object initialValue = reducer.apply(null, Action.of(ActionTypes.INIT));
-            if (initialValue == null) {
-                IllegalStateException e = new IllegalStateException(String.format(undefinedInitialStateMessage, key));
-                exceptions.add(e);
+    private static RuntimeException assertReducerSanity(Map<Enum<?>, BiFunction<Object, Action, Object>> finalReducers) {
+        RuntimeException result = null;
+        try {
+            List<IllegalStateException> exceptions = new ArrayList<>();
+            finalReducers.forEach((key, reducer) -> {
+                Object initialValue = reducer.apply(null, Action.of(ActionTypes.INIT));
+                if (initialValue == null) {
+                    IllegalStateException e = new IllegalStateException(String.format(undefinedInitialStateMessage, key));
+                    exceptions.add(e);
+                }
+            });
+            if (!exceptions.isEmpty()) {
+                IllegalStateException e = new IllegalStateException();
+                exceptions.forEach(e::addSuppressed);
+                result = e;
             }
-        });
-        if (exceptions.isEmpty()) {
-            return null;
-        } else {
-            IllegalStateException e = new IllegalStateException();
-            exceptions.forEach(e::addSuppressed);
-            return e;
+        } catch (RuntimeException e) {
+            result = e;
         }
+        return result;
     }
 
     /**
