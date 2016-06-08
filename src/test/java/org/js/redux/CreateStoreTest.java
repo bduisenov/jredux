@@ -155,7 +155,32 @@ public class CreateStoreTest {
 
         store.dispatch(unknownAction());
         verify(listener).onDispatch();
+    }
 
+    @Test
+    public void supportsRemovingASubscriptionWithinASubscription() {
+        Store store = createStore(Reducers::todos);
+        Listener listenerA = mock(Listener.class);
+        Listener listenerB = mock(Listener.class);
+        Listener listenerC = mock(Listener.class);
+
+        store.subscribe(listenerA);
+        Subscription unSubB = store.subscribe(new ListenerWithItsSubscription() {
+
+            @Override
+            public void onDispatch() {
+                listenerB.onDispatch();
+                subscription.unsubscribe();
+            }
+        });
+        store.subscribe(listenerC);
+
+        store.dispatch(unknownAction());
+        store.dispatch(unknownAction());
+
+        verify(listenerA, times(2)).onDispatch();
+        verify(listenerB).onDispatch();
+        verify(listenerC, times(2)).onDispatch();
     }
 
 }

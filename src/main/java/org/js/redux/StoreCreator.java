@@ -1,7 +1,7 @@
 package org.js.redux;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by bduisenov on 05/06/16.
@@ -55,7 +55,7 @@ public class StoreCreator {
 
             private State currentState = preloadedState;
 
-            private List<Listener> currentListeners = new ArrayList<>();
+            private List<Listener> currentListeners = new CopyOnWriteArrayList<>();
             private List<Listener> nextListeners = currentListeners;
             private boolean isDispatching = false;
 
@@ -73,7 +73,9 @@ public class StoreCreator {
                 } finally {
                     isDispatching = false;
                 }
-                (currentListeners = nextListeners).forEach(Listener::onDispatch);
+                for (Listener listener : (currentListeners = nextListeners)) {
+                    listener.onDispatch();
+                }
                 return action;
             }
 
@@ -88,8 +90,10 @@ public class StoreCreator {
                     throw new NullPointerException("Expected listener must not be null.");
                 }
                 nextListeners.add(listener);
-                return new Subscription() {
+                Subscription subscription = new Subscription() {
+
                     boolean isSubscribed = true;
+
                     @Override
                     public void unsubscribe() {
                         if (!isSubscribed) {
@@ -99,6 +103,10 @@ public class StoreCreator {
                         nextListeners.remove(listener);
                     }
                 };
+                if (listener instanceof ListenerWithItsSubscription) {
+                    ((ListenerWithItsSubscription) listener).accept(subscription);
+                }
+                return subscription;
             }
 
             @Override
