@@ -6,6 +6,6 @@ package org.js.redux;
 @FunctionalInterface
 public interface StoreEnhancerStoreCreator {
 
-    Store apply(Reducer add, State preloadedState);
+    Store apply(Reducer reducer, State preloadedState);
 
 }

@@ -1,10 +1,10 @@
 package org.js.redux;
 
 /* middleware */
-public interface MiddlewareAPI<S> {
+public interface MiddlewareAPI {
 
     Dispatch dispatch();
 
-    S getState();
+    State getState();
 
 }

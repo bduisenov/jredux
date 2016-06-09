@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.sun.istack.internal.Nullable;
 
@@ -136,7 +137,56 @@ public class Redux {
      * @return
      */
     public static GenericStoreEnhancer applyMiddleware(Middleware... middlewares) {
-        return null;
+        return createStore -> (Function<Reducer, Store>) reducer -> {
+            Store store = createStore.apply(reducer, null);
+            Dispatch dispatch = store::dispatch;
+
+            //chain
+
+            MiddlewareAPI middlewareAPI = new MiddlewareAPI() {
+
+                public State getState() {
+                    return store.getState();
+                }
+
+                public Dispatch dispatch() {
+                    return action -> dispatch.apply(action);
+                }
+            };
+
+            Function<Dispatch, Dispatch>[] chain = Arrays.asList(middlewares).stream() //
+                    .map(middleware -> middleware.apply(middlewareAPI)) //
+                    .collect(Collectors.toList()).toArray(new Function[]{});
+            Dispatch dispatch1 = compose(chain).apply(store::dispatch);
+
+            return new Store() {
+
+                @Override
+                public Action dispatch(Action action) {
+                    return dispatch1.apply(action);
+                }
+
+                @Override
+                public State getState() {
+                    return store.getState();
+                }
+
+                @Override
+                public Subscription subscribe(Listener listener) {
+                    return store.subscribe(listener);
+                }
+
+                @Override
+                public void replaceReducer(Reducer nextReducer) {
+                    store.replaceReducer(nextReducer);
+                }
+
+                @Override
+                public StoreCreator createStore() {
+                    return store.createStore();
+                }
+            };
+        };
     }
 
     /* compose */

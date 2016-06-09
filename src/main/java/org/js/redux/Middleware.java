@@ -10,8 +10,9 @@ import java.util.function.Function;
  * side effects like routing, or turning an asynchronous API call into a series of synchronous
  * actions.
  */
+@FunctionalInterface
 public interface Middleware {
 
-    <S> Function<Dispatch, Dispatch> apply(MiddlewareAPI<S> api);
+    Function<Dispatch, Dispatch> apply(MiddlewareAPI api);
 
 }
