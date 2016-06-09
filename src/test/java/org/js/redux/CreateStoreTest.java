@@ -245,4 +245,49 @@ public class CreateStoreTest {
         verify(listener3).onDispatch();
     }
 
+    @Test
+    public void usesTheLastSnapshotOfSubscribersDuringNestedDispatch() {
+        Store store = createStore(Reducers::todos);
+
+        Listener listener1 = mock(Listener.class);
+        Listener listener2 = mock(Listener.class);
+        Listener listener3 = mock(Listener.class);
+        Listener listener4 = mock(Listener.class);
+
+        AtomicReference<Subscription> unsubscribe4Ref = new AtomicReference<>();
+        AtomicReference<Subscription> unsubscribe1Ref = new AtomicReference<>();
+        Subscription unsubscribe1 = store.subscribe(() -> {
+            listener1.onDispatch();
+            verify(listener1).onDispatch();
+            verify(listener2, never()).onDispatch();
+            verify(listener3, never()).onDispatch();
+            verify(listener4, never()).onDispatch();
+
+            unsubscribe1Ref.get().unsubscribe();
+            Subscription unsubscribe4 = store.subscribe(listener4);
+            unsubscribe4Ref.set(unsubscribe4);
+            store.dispatch(unknownAction());
+            verify(listener1).onDispatch();
+            verify(listener2).onDispatch();
+            verify(listener3).onDispatch();
+            verify(listener4).onDispatch();
+        });
+        unsubscribe1Ref.set(unsubscribe1);
+        store.subscribe(listener2);
+        store.subscribe(listener3);
+
+        store.dispatch(unknownAction());
+        verify(listener1).onDispatch();
+        verify(listener2, times(2)).onDispatch();
+        verify(listener3, times(2)).onDispatch();
+        verify(listener4).onDispatch();
+
+        unsubscribe4Ref.get().unsubscribe();
+        store.dispatch(unknownAction());
+        verify(listener1).onDispatch();
+        verify(listener2, times(3)).onDispatch();
+        verify(listener3, times(3)).onDispatch();
+        verify(listener4).onDispatch();
+    }
+
 }
