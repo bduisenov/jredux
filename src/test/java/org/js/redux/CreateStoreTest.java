@@ -290,4 +290,15 @@ public class CreateStoreTest {
         verify(listener4).onDispatch();
     }
 
+    @Test
+    public void providesAnUpToDateStateWhenASubscriberIsNotified() {
+        Store store = createStore(Reducers::todos);
+        store.subscribe(() -> {
+            assertEquals(State.of(Collections.singletonList(new Todo(1, "Hello"))), store.getState());
+        });
+        store.dispatch(addTodo("Hello"));
+    }
+
+    //TODO only accepts plain object actions
+
 }
