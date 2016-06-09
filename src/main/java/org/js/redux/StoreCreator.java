@@ -62,7 +62,7 @@ public class StoreCreator {
             @Override
             public Action dispatch(Action action) {
                 if (action.type == null) {
-                    throw new NullPointerException(undefinedActionTypeMessage);
+                    throw new IllegalArgumentException(undefinedActionTypeMessage);
                 }
                 if (isDispatching) {
                     throw new UnsupportedOperationException(illegalUsageOfReducerMessage);
@@ -111,6 +111,9 @@ public class StoreCreator {
 
             @Override
             public void replaceReducer(Reducer nextReducer) {
+                if (nextReducer == null) {
+                    throw new NullPointerException("Expected the nextReducer to be a function.");
+                }
                 currentReducer = nextReducer;
                 dispatch(Action.of(Redux.ActionTypes.INIT));
             }

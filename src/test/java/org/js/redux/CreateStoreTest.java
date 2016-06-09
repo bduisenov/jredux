@@ -1,9 +1,16 @@
 package org.js.redux;
 
+import static org.js.redux.CreateStoreTest.Keys.bar;
+import static org.js.redux.CreateStoreTest.Keys.foo;
+import static org.js.redux.Redux.combineReducers;
 import static org.js.redux.StoreCreator.createStore;
 import static org.js.redux.helpers.ActionCreators.addTodo;
+import static org.js.redux.helpers.ActionCreators.dispatchInMiddle;
+import static org.js.redux.helpers.ActionCreators.throwError;
 import static org.js.redux.helpers.ActionCreators.unknownAction;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -300,5 +307,106 @@ public class CreateStoreTest {
     }
 
     //TODO only accepts plain object actions
+
+    @Test
+    public void handlesNestedDispatchesGracefully() {
+        Store store = createStore(combineReducers(ReducersMapObject.builder() //
+                .add(foo).withInitialValue(0).reducer((state, action) -> action.type == foo ? 1 : state) //
+                .add(bar).withInitialValue(0).reducer((state, action) -> action.type == bar ? 2 : state) //
+                .build()));
+        store.subscribe(() -> {
+            State state = store.getState();
+            if (state.get(bar, Integer.class).orElse(0) == 0) {
+                store.dispatch(Action.of(bar));
+            }
+        });
+        store.dispatch(Action.of(foo));
+        assertEquals(State.of(foo, 1, bar, 2), store.getState());
+    }
+
+    @Test
+    public void doesNotAllowDispatchFromWithinAReducer() {
+        Store store = createStore(Reducers::dispatchInTheMiddleOfReducer);
+        try {
+            store.dispatch(dispatchInMiddle(() -> store.dispatch(unknownAction())));
+            fail();
+        } catch (RuntimeException e) {
+            assertTrue(e.getMessage().matches(".*may not dispatch.*"));
+        }
+    }
+
+    @Test
+    public void recoversFromAnErrorWithinAReducer() {
+        Store store = createStore(Reducers::errorThrowingReducer);
+        try {
+            store.dispatch(throwError());
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // ignore
+        }
+
+        store.dispatch(unknownAction());
+    }
+
+    @Test
+    public void throwsIfActionTypeIsMissing() {
+        Store store = createStore(Reducers::todos);
+        try {
+            store.dispatch(Action.empty());
+            fail();
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().matches(".*Actions may not have an undefined \"type\" property.*"));
+        }
+    }
+
+    @Test
+    public void throwsIfActionTypeIsUndefined() {
+        Store store = createStore(Reducers::todos);
+        try {
+            store.dispatch(Action.of(null));
+            fail();
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().matches(".*Actions may not have an undefined \"type\" property.*"));
+        }
+    }
+
+    //TODO does not throw if action type is falsy
+
+    //TODO accepts enhancer as the third argument
+
+    //TODO accepts enhancer as the second argument if initial state is missing
+
+    //TODO throws if enhancer is neither undefined nor a function
+
+    @Test
+    public void throwsIfNextReducerIsNotAFunction() {
+        Store store = createStore(Reducers::todos);
+
+        try {
+            store.replaceReducer(null);
+            fail();
+        } catch (NullPointerException e) {
+            assertTrue(e.getMessage().matches(".*Expected the nextReducer to be a function.*"));
+        }
+
+        store.replaceReducer((state, action) -> null);
+    }
+
+    @Test
+    public void throwsIfListenerIsNotAFunction() {
+        Store store = createStore(Reducers::todos);
+
+        try {
+            store.subscribe(null);
+        } catch (NullPointerException e) {
+            // success
+        }
+    }
+
+    // Symbol.observable interop point
+
+    enum Keys {
+        foo, bar
+    }
 
 }

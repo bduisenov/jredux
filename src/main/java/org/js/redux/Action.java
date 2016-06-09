@@ -38,12 +38,7 @@ public final class Action {
     }
 
     public <T> Optional<T> getValue(Class<T> type) {
-        T result = null;
-        Object value = values.get(new AbstractMap.SimpleImmutableEntry<>(SINGLE_VALUE, type));
-        if (value != null) {
-            result = type.cast(value);
-        }
-        return Optional.ofNullable(result);
+        return getValue(SINGLE_VALUE, type);
     }
 
     public <T> Optional<T> getValue(String key, Class<T> type) {
@@ -52,10 +47,21 @@ public final class Action {
         if (value != null) {
             result = type.cast(value);
         }
+        if (result == null) {
+            value = values.entrySet().stream() //
+                    .filter(e -> e.getKey().getKey().equals(key)) //
+                    .findFirst() //
+                    .filter(e -> type.isAssignableFrom(e.getKey().getValue())) //
+                    .map(Map.Entry::getValue)
+                    .orElse(null);
+            if (value != null) {
+                result = type.cast(value);
+            }
+        }
         return Optional.ofNullable(result);
     }
 
-    public static Action of() {
+    public static Action empty() {
         return new Action(null);
     }
 

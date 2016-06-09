@@ -1,6 +1,7 @@
 package org.js.redux.helpers;
 
 import static org.js.redux.helpers.ActionTypes.ADD_TODO;
+import static org.js.redux.helpers.ActionTypes.DISPATCH_IN_MIDDLE;
 import static org.js.redux.helpers.ActionTypes.THROW_ERROR;
 import static org.js.redux.helpers.ActionTypes.UNKNOWN_ACTION;
 
@@ -19,7 +20,9 @@ public class ActionCreators {
 
     //TODO addTodoIfEmpty
 
-    //TODO dispatchInMiddle
+    public static Action dispatchInMiddle(Runnable boundDispatchFn) {
+        return Action.of(DISPATCH_IN_MIDDLE, "boundDispatchFn", boundDispatchFn);
+    }
 
     public static Action throwError() {
         return Action.of(THROW_ERROR);

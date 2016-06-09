@@ -7,7 +7,6 @@ import static org.js.redux.helpers.ActionTypes.THROW_ERROR;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Supplier;
 
 import org.js.redux.Action;
 import org.js.redux.State;
@@ -48,18 +47,16 @@ public class Reducers {
         return state;
     }
 
-    public static List dispatchInTheMiddleOfReducer(List state, Action action) {
-        state = state == null ? Collections.emptyList() : state;
+    public static State dispatchInTheMiddleOfReducer(State state, Action action) {
         if (action.type == DISPATCH_IN_MIDDLE) {
-            action.getValue("boundDispatchFn", Supplier.class).ifPresent(Supplier::get);
+            action.getValue("boundDispatchFn", Runnable.class).ifPresent(Runnable::run);
         }
         return state;
     }
 
-    public static List errorThrowingReducer(List state, Action action) {
-        state = state == null ? Collections.emptyList() : state;
+    public static State errorThrowingReducer(State state, Action action) {
         if (action.type == THROW_ERROR) {
-            throw new RuntimeException();
+            throw new UnsupportedOperationException();
         }
         return state;
     }

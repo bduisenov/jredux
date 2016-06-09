@@ -86,7 +86,7 @@ public class CombineRudecersTest {
         }
 
         try {
-            reducer.apply(State.of(counter, 0), Action.of());
+            reducer.apply(State.of(counter, 0), Action.empty());
             fail();
         } catch (Exception e) {
             assertTrue(e.getMessage().matches(".*counter.*an action.*"));
@@ -145,7 +145,7 @@ public class CombineRudecersTest {
                 .reducer((state, action) -> state) //
                 .build());
 
-        State initialState = reducer.apply(null, Action.of());
+        State initialState = reducer.apply(null, Action.empty());
         assertSame(initialState, reducer.apply(initialState, Action.of(FOO)));
     }
 
@@ -165,7 +165,7 @@ public class CombineRudecersTest {
                 .reducer((state, action) -> state) //
                 .build());
 
-        State initialState = reducer.apply(null, Action.of());
+        State initialState = reducer.apply(null, Action.empty());
         assertNotSame(initialState, reducer.apply(initialState, Action.of(increment)));
     }
 
