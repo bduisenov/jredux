@@ -141,8 +141,6 @@ public class Redux {
             Store store = createStore.apply(reducer, null);
             Dispatch dispatch = store::dispatch;
 
-            //chain
-
             MiddlewareAPI middlewareAPI = new MiddlewareAPI() {
 
                 public State getState() {
@@ -157,13 +155,13 @@ public class Redux {
             Function<Dispatch, Dispatch>[] chain = Arrays.asList(middlewares).stream() //
                     .map(middleware -> middleware.apply(middlewareAPI)) //
                     .collect(Collectors.toList()).toArray(new Function[]{});
-            Dispatch dispatch1 = compose(chain).apply(store::dispatch);
+            Dispatch dispatchInternal = compose(chain).apply(store::dispatch);
 
             return new Store() {
 
                 @Override
                 public Action dispatch(Action action) {
-                    return dispatch1.apply(action);
+                    return dispatchInternal.apply(action);
                 }
 
                 @Override

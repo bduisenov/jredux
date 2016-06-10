@@ -34,4 +34,10 @@ public class ApplyMiddlewareTest {
         assertEquals(State.of(Arrays.asList(new Todo(1, "Use Redux"), new Todo(2, "Flux FTW!"))), store.getState());
     }
 
+    //TODO passes recursive dispatches through the middleware chain
+
+    //TODO works with thunk middleware
+
+    //TODO keeps unwrapped dispatch available while middleware is initializing
+
 }

@@ -90,7 +90,7 @@ public class StoreCreator {
                     throw new NullPointerException("Expected listener must not be null.");
                 }
                 nextListeners.add(listener);
-                Subscription subscription = new Subscription() {
+                return new Subscription() {
 
                     boolean isSubscribed = true;
 
@@ -103,10 +103,6 @@ public class StoreCreator {
                         nextListeners.remove(listener);
                     }
                 };
-                if (listener instanceof ListenerWithItsSubscription) {
-                    ((ListenerWithItsSubscription) listener).accept(subscription);
-                }
-                return subscription;
             }
 
             @Override

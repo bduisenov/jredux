@@ -128,6 +128,10 @@ public final class State {
         return new State(xs);
     }
 
+    public boolean isEmpty() {
+        return state.isEmpty();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o)
