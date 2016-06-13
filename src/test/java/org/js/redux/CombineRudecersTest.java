@@ -35,11 +35,11 @@ public class CombineRudecersTest {
                 .reducer((state, action) -> //
                 (action.type == increment) ? state + 1 : state) //
                 .add(stack).withInitialValue(Collections.<String>emptyList()) //
-                .reducer((state, action) -> {
+                .reducer((List<String> state, Action<String> action) -> {
                     if (action.type == push) {
                         List<String> newState = new ArrayList<>(state.size() + 1);
                         newState.addAll(state);
-                        newState.add(action.getValue(String.class).orElse(null));
+                        newState.add(action.payload.orElse(null));
                         return newState;
                     }
                     return state;
@@ -173,10 +173,20 @@ public class CombineRudecersTest {
 
     //TODO warns if no reducers are passed to combineReducers
 
-    //TODO warns if input state does not match reducer shape
+    @Test
+    public void warnsIfInputStateDoesNotMatchReducerShape() {
+        Reducer reducer = combineReducers(ReducersMapObject.builder() //
+                .add(ReducerKeys.foo).withInitialValue(State.of(ReducerKeys.bar, 1)) //
+                .reducer((state, action) -> state) //
+                .add(ReducerKeys.baz).withInitialValue(State.of(ReducerKeys.qux, 3)) //
+                .reducer((state, action) -> state) //
+                .build());
+        reducer.apply(null, null);
+
+    }
 
     enum ReducerKeys {
-        counter, stack, throwingReducer, child1, child2, child3
+        counter, stack, throwingReducer, child1, child2, child3, foo, baz, bar, qux
     }
 
     enum Type {

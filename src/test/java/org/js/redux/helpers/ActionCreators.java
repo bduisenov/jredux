@@ -21,7 +21,7 @@ public class ActionCreators {
     //TODO addTodoIfEmpty
 
     public static Action dispatchInMiddle(Runnable boundDispatchFn) {
-        return Action.of(DISPATCH_IN_MIDDLE, "boundDispatchFn", boundDispatchFn);
+        return Action.of(DISPATCH_IN_MIDDLE, boundDispatchFn);
     }
 
     public static Action throwError() {

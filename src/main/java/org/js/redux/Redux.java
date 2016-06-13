@@ -68,8 +68,9 @@ public class Redux {
             }
 
             boolean hasChanged = false;
-            Map<Enum<?>, Object> nextState = new LinkedHashMap<>();
-            for (Map.Entry<Enum<?>, BiFunction<Object, Action, Object>> entry : reducers.getReducers().entrySet()) {
+            int previousStateHashCode = state.hashCode();
+            Map<Enum<?>, Object> nextStateMap = new LinkedHashMap<>();
+            for (Map.Entry<Enum<?>, BiFunction> entry : reducers.getReducers().entrySet()) {
                 Enum<?> key = entry.getKey();
                 BiFunction<Object, Action, Object> reducer = entry.getValue();
 
@@ -81,10 +82,14 @@ public class Redux {
                     String errorMessage = getUndefinedStateErrorMessage(key, action);
                     throw new RuntimeException(errorMessage);
                 }
-                nextState.put(key, nextStateForKey);
+                nextStateMap.put(key, nextStateForKey);
                 hasChanged = hasChanged || nextStateForKey != previousStateForKey;
             }
-            return hasChanged ? State.of(nextState) : state;
+            State nextState = hasChanged ? State.of(nextStateMap) : state;
+            if (nextState == state && nextState.hashCode() != previousStateHashCode) {
+                throw new IllegalStateException("hashCode of state was changed. you should avoid mutating state");
+            }
+            return nextState;
         };
     }
 
@@ -94,7 +99,7 @@ public class Redux {
 
     @Nullable
     private static String getUnexpectedStateShapeWarningMessage(State state,
-            Map<Enum<?>, BiFunction<Object, Action, Object>> reducers, Action action) {
+            Map<Enum<?>, BiFunction> reducers, Action action) {
         if (reducers.isEmpty()) {
             return unexpectedStateShapeWarningMessage;
         }
@@ -107,7 +112,7 @@ public class Redux {
     }
 
     @Nullable
-    private static RuntimeException assertReducerSanity(Map<Enum<?>, BiFunction<Object, Action, Object>> finalReducers) {
+    private static RuntimeException assertReducerSanity(Map<Enum<?>, BiFunction> finalReducers) {
         RuntimeException result = null;
         try {
             List<IllegalStateException> exceptions = new ArrayList<>();

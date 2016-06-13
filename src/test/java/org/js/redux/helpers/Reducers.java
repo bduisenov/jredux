@@ -23,33 +23,33 @@ public class Reducers {
                 .orElse(0) + 1;
     }
 
-    public static State todos(State state, Action action) {
+    public static State todos(State state, Action<String> action) {
         state = (state == null) ? State.empty() : state;
         if (action.type == ADD_TODO) {
             List<Todo> todos = state.<List<Todo>>get().orElse(Collections.emptyList());
             List<Todo> newTodos = new ArrayList<>(todos.size() + 1);
             newTodos.addAll(todos);
-            newTodos.add(new Todo(id(todos), action.getValue(String.class).orElse(null)));
+            newTodos.add(new Todo(id(todos), action.payload.orElse(null)));
             return State.of(newTodos);
         }
         return state;
     }
 
-    public static State todosReverse(State state, Action action) {
+    public static State todosReverse(State state, Action<String> action) {
         state = (state == null) ? State.empty() : state;
         if (action.type == ADD_TODO) {
             List<Todo> todos = state.<List<Todo>>get().orElse(Collections.emptyList());
             List<Todo> newTodos = new ArrayList<>(todos.size() + 1);
-            newTodos.add(new Todo(id(todos), action.getValue(String.class).orElse(null)));
+            newTodos.add(new Todo(id(todos), action.payload.orElse(null)));
             newTodos.addAll(todos);
             return State.of(newTodos);
         }
         return state;
     }
 
-    public static State dispatchInTheMiddleOfReducer(State state, Action action) {
+    public static State dispatchInTheMiddleOfReducer(State state, Action<Runnable> action) {
         if (action.type == DISPATCH_IN_MIDDLE) {
-            action.getValue("boundDispatchFn", Runnable.class).ifPresent(Runnable::run);
+            action.payload.ifPresent(Runnable::run);
         }
         return state;
     }

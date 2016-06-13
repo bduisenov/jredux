@@ -1,110 +1,79 @@
 package org.js.redux;
 
-import java.util.AbstractMap;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 /**
  * An *action* is a plain object that represents an intention to change the state. Actions are the
- * only way to getReducers data into the store. Any data, whether from UI events, network callbacks, or
- * other sources such as WebSockets needs to eventually be dispatched as actions.
+ * only way to getReducers data into the store. Any data, whether from UI events, network callbacks,
+ * or other sources such as WebSockets needs to eventually be dispatched as actions.
  *
  * Actions must have a `type` field that indicates the type of action being performed. Types can be
  * defined as constants and imported from another module. It’s better to use strings for `type` than
  * Symbols because strings are serializable.
  *
- * Other than `type`, the structure of an action object is really up to you. If you’re interested,
- * check out Flux Standard Action for recommendations on how actions should be constructed.
+ * This implementation is more or less relying on FSA
+ * {@link https://github.com/acdlite/flux-standard-action} standard.
+ * 
  */
-public final class Action {
+public final class Action<T> {
 
-    private static final String SINGLE_VALUE = "value";
-
+    /**
+     * The type of an action identifies to the consumer the nature of the action that has occurred.
+     * Two actions with the same type MUST be strictly equivalent (using ===). By convention, type
+     * is usually string constant or a Symbol.
+     */
     public final Enum<?> type;
 
-    private final Map<Map.Entry<String, Class<?>>, Object> values;
+    /**
+     * The optional payload property MAY be any type of value. It represents the payload of the
+     * action. Any information about the action that is not the type or status of the action should
+     * be part of the payload field.
+     * 
+     * By convention, if error is true, the payload SHOULD be an error object. This is akin to
+     * rejecting a promise with an error object.
+     */
+    public final Optional<T> payload;
+
+    /**
+     * The optional error property MAY be set to true if the action represents an error.
+     * 
+     * An action whose error is true is analogous to a rejected Promise. By convention, the payload
+     * SHOULD be an error object.
+     */
+    public final boolean error;
 
     private Action(Enum<?> type) {
         this.type = type;
-        this.values = Collections.emptyMap();
+        this.payload = Optional.empty();
+        this.error = false;
     }
 
-    private Action(Enum<?> type, Map<Map.Entry<String, Class<?>>, Object> values) {
+    private Action(Enum<?> type, T val) {
         this.type = type;
-        this.values = values;
+        this.payload = Optional.ofNullable(val);
+        this.error = false;
     }
 
-    public <T> Optional<T> getValue(Class<T> type) {
-        return getValue(SINGLE_VALUE, type);
-    }
-
-    public <T> Optional<T> getValue(String key, Class<T> type) {
-        T result = null;
-        Object value = values.get(new AbstractMap.SimpleImmutableEntry<>(key, type));
-        if (value != null) {
-            result = type.cast(value);
-        }
-        if (result == null) {
-            value = values.entrySet().stream() //
-                    .filter(e -> e.getKey().getKey().equals(key)) //
-                    .findFirst() //
-                    .filter(e -> type.isAssignableFrom(e.getKey().getValue())) //
-                    .map(Map.Entry::getValue)
-                    .orElse(null);
-            if (value != null) {
-                result = type.cast(value);
-            }
-        }
-        return Optional.ofNullable(result);
+    private Action(Enum<?> type, T val, boolean error) {
+        this.type = type;
+        this.payload = Optional.of(val);
+        this.error = error;
     }
 
     public static Action empty() {
-        return new Action(null);
+        return new Action<>(null);
     }
 
     public static Action of(Enum<?> type) {
-        return new Action(type);
+        return new Action<>(type);
     }
 
-    public static Action of(Enum<?> type, Object v1) {
-        return new Action(type, new HashMap<Map.Entry<String, Class<?>>, Object>() {{
-            put(new SimpleImmutableEntry<>(SINGLE_VALUE, v1.getClass()), v1);
-        }});
+    public static <T> Action of(Enum<?> type, T val) {
+        return new Action<>(type, val);
     }
 
-    public static Action of(Enum<?> type, String k1, Object v1) {
-        return new Action(type, new HashMap<Map.Entry<String, Class<?>>, Object>() {{
-            put(new SimpleImmutableEntry<>(k1, v1.getClass()), v1);
-        }});
-    }
-
-    public static Action of(Enum<?> type, String k1, Object v1, String k2, Object v2) {
-        return new Action(type, new HashMap<Map.Entry<String, Class<?>>, Object>() {{
-            put(new SimpleImmutableEntry<>(k1, v1.getClass()), v1);
-            put(new SimpleImmutableEntry<>(k2, v2.getClass()), v2);
-        }});
-    }
-
-    public static Action of(Enum<?> type, String k1, Object v1, String k2, Object v2, String k3, Object v3) {
-        return new Action(type, new HashMap<Map.Entry<String, Class<?>>, Object>() {{
-            put(new SimpleImmutableEntry<>(k1, v1.getClass()), v1);
-            put(new SimpleImmutableEntry<>(k2, v2.getClass()), v2);
-            put(new SimpleImmutableEntry<>(k3, v3.getClass()), v3);
-        }});
-    }
-
-    public interface Builder {
-        void add(String key, Object val);
-    }
-
-    public static Action of(Enum<?> type, Consumer<Builder> vals) {
-        HashMap<Map.Entry<String, Class<?>>, Object> xs = new HashMap<>();
-        vals.accept((key, val) -> //
-            xs.put(new AbstractMap.SimpleImmutableEntry<>(key, val.getClass()), val));
-        return new Action(type, xs);
+    public static <T> Action error(Enum<?> type, T val) {
+        return new Action<>(type, val, true);
     }
 
     @Override
@@ -114,26 +83,26 @@ public final class Action {
         if (o == null || getClass() != o.getClass())
             return false;
 
-        Action action = (Action) o;
+        Action<?> action = (Action<?>) o;
 
-        if (type != null ? !type.equals(action.type) : action.type != null)
+        if (error != action.error)
             return false;
-        return values != null ? values.equals(action.values) : action.values == null;
+        if (!type.equals(action.type))
+            return false;
+        return payload.equals(action.payload);
 
     }
 
     @Override
     public int hashCode() {
-        int result = type != null ? type.hashCode() : 0;
-        result = 31 * result + (values != null ? values.hashCode() : 0);
+        int result = type.hashCode();
+        result = 31 * result + payload.hashCode();
+        result = 31 * result + (error ? 1 : 0);
         return result;
     }
 
     @Override
     public String toString() {
-        return "Action{" +
-                "type=" + type +
-                ", values=" + values +
-                '}';
+        return "Action{" + "payload=" + payload + ", type=" + type + '}';
     }
 }

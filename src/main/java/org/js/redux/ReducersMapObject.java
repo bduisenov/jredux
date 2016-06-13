@@ -13,9 +13,9 @@ public final class ReducersMapObject {
 
     private final Map<Enum<?>, Class<?>> types;
 
-    private final Map<Enum<?>, BiFunction<Object, Action, Object>> reducers;
+    private final Map<Enum<?>, BiFunction> reducers;
 
-    private ReducersMapObject(Map<Enum<?>, Class<?>> types, Map<Enum<?>, BiFunction<Object, Action, Object>> reducers) {
+    private ReducersMapObject(Map<Enum<?>, Class<?>> types, Map<Enum<?>, BiFunction> reducers) {
         this.types = types;
         this.reducers = reducers;
     }
@@ -24,62 +24,62 @@ public final class ReducersMapObject {
         return types;
     }
 
-    public Map<Enum<?>, BiFunction<Object, Action, Object>> getReducers() {
+    public Map<Enum<?>, BiFunction> getReducers() {
         return reducers;
     }
 
-    public static <A extends Action> KeyStep<A> builder() {
-        return new Steps<>();
+    public static KeyStep builder() {
+        return new Steps();
     }
 
-    public interface BuildStep<A extends Action> {
+    public interface BuildStep {
 
         ReducersMapObject build();
     }
 
-    public interface ReducerStep<A extends Action> {
+    public interface ReducerStep {
 
-        <T> KeyOrBuildStep<A> reducer(BiFunction<T, A, T> reducer);
+        <T, A> KeyOrBuildStep reducer(BiFunction<T, Action<A>, T> reducer);
     }
 
-    public interface TypedReducerStep<T, A extends Action> {
+    public interface TypedReducerStep<T> {
 
-        KeyOrBuildStep<A> reducer(BiFunction<T, A, T> reducer);
+        <A> KeyOrBuildStep reducer(BiFunction<T, Action<A>, T> reducer);
     }
 
-    public interface InitialValueStep<A extends Action> {
+    public interface InitialValueStep {
 
-        <T> TypedReducerStep<T, A> withInitialValue(T initialValue);
+        <T> TypedReducerStep<T> withInitialValue(T initialValue);
     }
 
-    public interface StateTypeStep<A extends Action> {
+    public interface StateTypeStep {
 
-        <T> TypedReducerStep<T, A> withStateType(Class<T> type);
+        <T> TypedReducerStep<T> withStateType(Class<T> type);
     }
 
-    public interface KeyStep<A extends Action> {
+    public interface KeyStep {
 
-        InitialValueOrStateTypeStep<A> add(Enum<?> key);
+        InitialValueOrStateTypeStep add(Enum<?> key);
     }
 
-    public interface KeyOrBuildStep<A extends Action> extends KeyStep<A>, BuildStep<A> {
-
-    }
-
-    public interface InitialValueOrStateTypeStep<A extends Action> extends InitialValueStep<A>, StateTypeStep<A> {
+    public interface KeyOrBuildStep extends KeyStep, BuildStep {
 
     }
 
-    private static class Steps<A extends Action> implements //
-            KeyStep<A>, //
-            KeyOrBuildStep<A>, //
-            InitialValueOrStateTypeStep<A>, //
-            ReducerStep<A>, //
-            BuildStep<A> {
+    public interface InitialValueOrStateTypeStep extends InitialValueStep, StateTypeStep {
+
+    }
+
+    private static class Steps implements //
+            KeyStep, //
+            KeyOrBuildStep, //
+            InitialValueOrStateTypeStep, //
+            ReducerStep, //
+            BuildStep {
 
         private final Map<Enum<?>, Class<?>> types = new HashMap<>();
 
-        private final Map<Enum<?>, BiFunction<Object, Action, Object>> reducers = new LinkedHashMap<>();
+        private final Map<Enum<?>, BiFunction> reducers = new LinkedHashMap<>();
 
         private Enum<?> key;
 
@@ -88,7 +88,7 @@ public final class ReducersMapObject {
         private Object initialValue;
 
         @Override
-        public InitialValueOrStateTypeStep<A> add(Enum<?> key) {
+        public InitialValueOrStateTypeStep add(Enum<?> key) {
             if (key == null) {
                 throw new NullPointerException("reducer's key must be set");
             }
@@ -97,19 +97,19 @@ public final class ReducersMapObject {
         }
 
         @Override
-        public <T> TypedReducerStep<T, A> withInitialValue(T initialValue) {
+        public <T> TypedReducerStep<T> withInitialValue(T initialValue) {
             this.initialValue = initialValue;
             return this::reducer;
         }
 
         @Override
-        public <T> TypedReducerStep<T, A> withStateType(Class<T> type) {
+        public <T> TypedReducerStep<T> withStateType(Class<T> type) {
             this.type = type;
             return this::reducer;
         }
 
         @Override
-        public <T> KeyOrBuildStep<A> reducer(BiFunction<T, A, T> reducer) {
+        public <T, A> KeyOrBuildStep reducer(BiFunction<T, Action<A>, T> reducer) {
             if (reducer == null) {
                 throw new NullPointerException("reducer must not be null");
             }
@@ -120,13 +120,13 @@ public final class ReducersMapObject {
             types.put(key, type);
 
             if (initialValue == null) {
-                reducers.put(key, (BiFunction<Object, Action, Object>) reducer);
+                reducers.put(key, (BiFunction) reducer);
             } else {
-                Function<T, BiFunction<T, A, T>> reducerWithInitialValue = iv -> (state, action) -> {
+                Function<T, BiFunction<T, Action<A>, T>> reducerWithInitialValue = iv -> (state, action) -> {
                     state = state == null ? iv : state;
                     return reducer.apply(state, action);
                 };
-                reducers.put(key, (BiFunction<Object, Action, Object>) reducerWithInitialValue.apply((T)initialValue));
+                reducers.put(key, (BiFunction) reducerWithInitialValue.apply((T)initialValue));
             }
 
             this.key = null;
