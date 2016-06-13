@@ -96,8 +96,8 @@ public class CombineRudecersTest {
     @Test
     public void throwsAnErrorOnFirstCallIfAReducerReturnsUndefinedInitializing() {
         Reducer reducer = combineReducers(ReducersMapObject.builder() //
-                .add(counter).withStateType(Integer.class) //
-                .reducer((state, action) -> {
+                .add(counter) //
+                .reducer((Integer state, Action<Object> action) -> {
                     switch (action.type.toString()) {
                         case "increment":
                             return state + 1;
@@ -120,7 +120,7 @@ public class CombineRudecersTest {
     public void catchesErrorThrownInReducerWhenInitializingAndRethrow() {
         String errorMessage = "Error thrown in reducer";
         Reducer reducer = combineReducers(ReducersMapObject.builder() //
-                .add(throwingReducer).withStateType(Object.class) //
+                .add(throwingReducer) //
                 .reducer((state, action) -> {
                     throw new UnsupportedOperationException(errorMessage);
                 }).build());

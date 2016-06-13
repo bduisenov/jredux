@@ -52,28 +52,23 @@ public final class ReducersMapObject {
         <T> TypedReducerStep<T> withInitialValue(T initialValue);
     }
 
-    public interface StateTypeStep {
-
-        <T> TypedReducerStep<T> withStateType(Class<T> type);
-    }
-
     public interface KeyStep {
 
-        InitialValueOrStateTypeStep add(Enum<?> key);
+        InitialValueOrReducerStep add(Enum<?> key);
     }
 
     public interface KeyOrBuildStep extends KeyStep, BuildStep {
 
     }
 
-    public interface InitialValueOrStateTypeStep extends InitialValueStep, StateTypeStep {
+    public interface InitialValueOrReducerStep extends InitialValueStep, ReducerStep {
 
     }
 
     private static class Steps implements //
             KeyStep, //
             KeyOrBuildStep, //
-            InitialValueOrStateTypeStep, //
+            InitialValueOrReducerStep, //
             ReducerStep, //
             BuildStep {
 
@@ -88,7 +83,7 @@ public final class ReducersMapObject {
         private Object initialValue;
 
         @Override
-        public InitialValueOrStateTypeStep add(Enum<?> key) {
+        public InitialValueOrReducerStep add(Enum<?> key) {
             if (key == null) {
                 throw new NullPointerException("reducer's key must be set");
             }
@@ -99,12 +94,6 @@ public final class ReducersMapObject {
         @Override
         public <T> TypedReducerStep<T> withInitialValue(T initialValue) {
             this.initialValue = initialValue;
-            return this::reducer;
-        }
-
-        @Override
-        public <T> TypedReducerStep<T> withStateType(Class<T> type) {
-            this.type = type;
             return this::reducer;
         }
 
