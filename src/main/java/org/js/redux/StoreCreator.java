@@ -130,10 +130,6 @@ public class StoreCreator {
                 dispatch(Action.of(Redux.ActionTypes.INIT));
             }
 
-            @Override
-            public StoreCreator createStore() {
-                return null;
-            }
         };
         store.dispatch(Action.of(Redux.ActionTypes.INIT));
         return store;

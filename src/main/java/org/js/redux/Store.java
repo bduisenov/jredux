@@ -76,6 +76,4 @@ public interface Store {
      */
     void replaceReducer(Reducer nextReducer);
 
-    StoreCreator createStore();
-
 }

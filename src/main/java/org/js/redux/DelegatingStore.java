@@ -15,11 +15,6 @@ public class DelegatingStore implements Store {
     }
 
     @Override
-    public StoreCreator createStore() {
-        return store.createStore();
-    }
-
-    @Override
     public Action dispatch(Action action) {
         return store.dispatch(action);
     }
