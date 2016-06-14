@@ -376,33 +376,12 @@ public class CreateStoreTest {
     public void acceptsEnhancerAsTheThirdArgument() {
         AtomicBoolean called = new AtomicBoolean(false);
         StoreEnhancer spyEnhancer = vanillaStore -> (reducer, preloadedState) -> {
-            Store store = vanillaStore.apply(reducer, preloadedState);
-            return new Store() {
+            return new DelegatingStore(vanillaStore.apply(reducer, preloadedState)) {
 
                 @Override
                 public Action dispatch(Action action) {
                     called.set(true);
                     return store.dispatch(action);
-                }
-
-                @Override
-                public State getState() {
-                    return store.getState();
-                }
-
-                @Override
-                public Subscription subscribe(Listener listener) {
-                    return store.subscribe(listener);
-                }
-
-                @Override
-                public void replaceReducer(Reducer nextReducer) {
-                    store.replaceReducer(nextReducer);
-                }
-
-                @Override
-                public StoreCreator createStore() {
-                    return store.createStore();
                 }
             };
         };

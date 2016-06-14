@@ -179,32 +179,13 @@ public class Redux {
                     .collect(Collectors.toList()).toArray(new Function[]{});
             Dispatch dispatchInternal = compose(chain).apply(store::dispatch);
 
-            return new Store() {
+            return new DelegatingStore(store) {
 
                 @Override
                 public Action dispatch(Action action) {
                     return dispatchInternal.apply(action);
                 }
 
-                @Override
-                public State getState() {
-                    return store.getState();
-                }
-
-                @Override
-                public Subscription subscribe(Listener listener) {
-                    return store.subscribe(listener);
-                }
-
-                @Override
-                public void replaceReducer(Reducer nextReducer) {
-                    store.replaceReducer(nextReducer);
-                }
-
-                @Override
-                public StoreCreator createStore() {
-                    return store.createStore();
-                }
             };
         };
     }
