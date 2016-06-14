@@ -71,6 +71,20 @@ public class ApplyMiddlewareTest {
         assertEquals(State.of(Arrays.asList(new Todo(1, "Hello"), new Todo(2, "World"), new Todo(3, "Maybe"))), store.getState());
     }
 
-    //TODO keeps unwrapped dispatch available while middleware is initializing
+    @Test
+    public void keepsUnwrappedDispatchAvailableWhileMiddlewareIsinitializing() {
+        Middleware earlyDispatch = middlewareAPI -> (Function<Dispatch, Dispatch>) dispatch -> {
+            dispatch.apply(addTodo("Hello"));
+            return new Dispatch() {
+
+                @Override
+                public Action apply(Action action) {
+                    return action;
+                }
+            };
+        };
+        /*Store store = createStore(Reducers::todos, applyMiddleware(earlyDispatch));
+        assertEquals(State.of(Collections.singletonList(new Todo(1, "Hello"))), store.getState());*/
+    }
 
 }

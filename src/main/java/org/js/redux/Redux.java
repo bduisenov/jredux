@@ -34,7 +34,13 @@ public class Redux {
             + "explicitly return the initial state. The initial state may not be undefined.";
 
     enum ActionTypes {
-        INIT;
+        INIT
+    }
+
+    private interface DispatchInternal extends Dispatch {
+
+        @Override
+        Action apply(Action action);
     }
     
     private Redux() {
@@ -176,16 +182,11 @@ public class Redux {
                 }
             };
 
-            Function<Dispatch, Dispatch>[] chain = Arrays.asList(middlewares).stream() //
+            List<Function<Dispatch, Dispatch>> unpackedMiddleware = Arrays.asList(middlewares).stream() //
                     .map(middleware -> middleware.apply(middlewareAPI)) //
-                    .collect(Collectors.toList()).toArray(new Function[]{});
-            Dispatch dispatchInternal = compose(chain).apply(new Dispatch() {
-
-                @Override
-                public Action apply(Action action) {
-                    return store.dispatch(action);
-                }
-            });
+                    .collect(Collectors.toList());
+            Function<Dispatch, Dispatch>[] chain = unpackedMiddleware.toArray(new Function[]{});
+            Dispatch dispatchInternal = compose(chain).apply((DispatchInternal) store::dispatch);
 
             DelegatingStore delegatingStore = new DelegatingStore(store) {
 
@@ -200,13 +201,7 @@ public class Redux {
                 }
 
             };
-            dispatchHolder.set(new Dispatch() {
-
-                @Override
-                public Action apply(Action action) {
-                    return delegatingStore.dispatch(action);
-                }
-            });
+            dispatchHolder.set((DispatchInternal) delegatingStore::dispatch);
             return delegatingStore;
         };
     }
