@@ -3,18 +3,24 @@ package org.js.redux;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Joiner;
 import com.sun.istack.internal.Nullable;
 
 /**
  * Created by bduisenov on 05/06/16.
  */
 public class Redux {
+
+    static final Logger logger = Logger.getLogger(Redux.class.getName());
 
     private static final String undefinedStateErrorMessage = "Given action \"%s\", reducer \"%s\" returned undefined. "
             + "To ignore an action, you must explicitly return the previous state.";
@@ -94,7 +100,7 @@ public class Redux {
     }
 
     private static void warning(String warningMessage) {
-        //FIXME
+        logger.warning(warningMessage);
     }
 
     @Nullable
@@ -102,6 +108,17 @@ public class Redux {
             Map<Enum<?>, BiFunction> reducers, Action action) {
         if (reducers.isEmpty()) {
             return unexpectedStateShapeWarningMessage;
+        }
+
+        String argumentName = action != null && action.type == ActionTypes.INIT ?
+                "preloadedState argument passed to createStore" :
+                "previous state received by the reducer";
+
+        Set<Enum> unexpectedKeys = new LinkedHashSet<>();
+        unexpectedKeys.addAll(state.getKeys());
+        unexpectedKeys.removeAll(reducers.keySet());
+        if (!unexpectedKeys.isEmpty()) {
+            return "Unexpected " + (unexpectedKeys.size() > 1 ? "keys" : "key") + " " + ("\"" + Joiner.on("\", \"").join(unexpectedKeys) + "\" found in " + argumentName + ". ") + "Expected to find one of the known reducer keys instead: " + ("\"" + Joiner.on("\", \"").join(reducers.keySet()) + "\". Unexpected keys will be ignored.");
         }
         return null;
     }

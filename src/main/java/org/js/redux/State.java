@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import com.google.common.reflect.TypeToken;
@@ -130,6 +131,10 @@ public final class State {
 
     public boolean isEmpty() {
         return state.isEmpty();
+    }
+
+    public Set<Enum<?>> getKeys() {
+        return state.keySet();
     }
 
     @Override

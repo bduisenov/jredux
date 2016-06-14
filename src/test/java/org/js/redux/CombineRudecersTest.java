@@ -1,9 +1,11 @@
 package org.js.redux;
 
+import static org.js.redux.CombineRudecersTest.ReducerKeys.bar;
 import static org.js.redux.CombineRudecersTest.ReducerKeys.child1;
 import static org.js.redux.CombineRudecersTest.ReducerKeys.child2;
 import static org.js.redux.CombineRudecersTest.ReducerKeys.child3;
 import static org.js.redux.CombineRudecersTest.ReducerKeys.counter;
+import static org.js.redux.CombineRudecersTest.ReducerKeys.qux;
 import static org.js.redux.CombineRudecersTest.ReducerKeys.stack;
 import static org.js.redux.CombineRudecersTest.ReducerKeys.throwingReducer;
 import static org.js.redux.CombineRudecersTest.Type.FOO;
@@ -11,17 +13,24 @@ import static org.js.redux.CombineRudecersTest.Type.increment;
 import static org.js.redux.CombineRudecersTest.Type.push;
 import static org.js.redux.CombineRudecersTest.Type.whatever;
 import static org.js.redux.Redux.combineReducers;
+import static org.js.redux.StoreCreator.createStore;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verifyZeroInteractions;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.LogRecord;
 
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Created by bduisenov on 06/06/16.
@@ -175,14 +184,48 @@ public class CombineRudecersTest {
 
     @Test
     public void warnsIfInputStateDoesNotMatchReducerShape() {
+        ConsoleHandler console = spy(new ConsoleHandler());
+        Redux.logger.addHandler(console);
+        Redux.logger.setUseParentHandlers(false);
+
         Reducer reducer = combineReducers(ReducersMapObject.builder() //
                 .add(ReducerKeys.foo).withInitialValue(State.of(ReducerKeys.bar, 1)) //
                 .reducer((state, action) -> state) //
-                .add(ReducerKeys.baz).withInitialValue(State.of(ReducerKeys.qux, 3)) //
+                .add(ReducerKeys.baz).withInitialValue(State.of(qux, 3)) //
                 .reducer((state, action) -> state) //
                 .build());
-        reducer.apply(null, null);
 
+        ArgumentCaptor<LogRecord> logRecordAC = ArgumentCaptor.forClass(LogRecord.class);
+        doNothing().when(console).publish(logRecordAC.capture());
+
+        reducer.apply(null, null);
+        verifyZeroInteractions(console);
+
+        reducer.apply(State.of(ReducerKeys.foo, State.of(ReducerKeys.bar, 2)), null);
+        verifyZeroInteractions(console);
+
+        reducer.apply(State.of(ReducerKeys.foo, State.of(ReducerKeys.bar, 2), ReducerKeys.baz, State.of(qux, 4)), null);
+        verifyZeroInteractions(console);
+
+        createStore(reducer, State.of(bar, 2));
+        String message = logRecordAC.getValue().getMessage();
+        assertTrue(message.matches("Unexpected key \"bar\".*createStore.*instead: \"foo\", \"baz\".*"));
+
+        createStore(reducer, State.of(bar, 2, qux, 4));
+        message = logRecordAC.getValue().getMessage();
+        assertTrue(message.matches("Unexpected keys \"bar\", \"qux\".*createStore.*instead: \"foo\", \"baz\".*"));
+
+        // /createStore has unexpected type of "Number".*keys: "foo", "baz"/
+
+        reducer.apply(State.of(bar, 2), null);
+        message = logRecordAC.getValue().getMessage();
+        assertTrue(message.matches("Unexpected key \"bar\".*reducer.*instead: \"foo\", \"baz\".*"));
+
+        reducer.apply(State.of(bar, 2, qux, 4), null);
+        message = logRecordAC.getValue().getMessage();
+        assertTrue(message.matches("Unexpected keys \"bar\", \"qux\".*reducer.*instead: \"foo\", \"baz\".*"));
+
+        // /reducer has unexpected type of "Number".*keys: "foo", "baz"/
     }
 
     enum ReducerKeys {
