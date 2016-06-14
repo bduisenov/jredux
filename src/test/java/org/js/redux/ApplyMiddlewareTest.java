@@ -2,10 +2,14 @@ package org.js.redux;
 
 import static org.js.redux.Redux.applyMiddleware;
 import static org.js.redux.helpers.ActionCreators.addTodo;
+import static org.js.redux.helpers.ActionCreators.addTodoAsync;
+import static org.js.redux.helpers.ActionCreators.addTodoIfEmpty;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import org.js.redux.helpers.MiddlewareHelper;
 import org.js.redux.helpers.Reducers;
@@ -19,11 +23,7 @@ public class ApplyMiddlewareTest {
 
     @Test
     public void wrapsDispatchMethodWithMiddlewareOnce() {
-        Middleware test = middlewareAPI -> next -> action -> {
-            assertNotNull(middlewareAPI.dispatch());
-            assertNotNull(middlewareAPI.getState());
-            return next.apply(action);
-        };
+        Middleware test = middlewareAPI -> (Function<Dispatch, Dispatch>) next -> (Dispatch) next;
         Store store = applyMiddleware(test, MiddlewareHelper::thunk) //
                 .apply(StoreCreator::createStore) //
                 .apply(Reducers::todos);
@@ -34,9 +34,42 @@ public class ApplyMiddlewareTest {
         assertEquals(State.of(Arrays.asList(new Todo(1, "Use Redux"), new Todo(2, "Flux FTW!"))), store.getState());
     }
 
-    //TODO passes recursive dispatches through the middleware chain
+    @Test
+    public void passesRecursiveDispatchesThroughTheMiddlewareChain() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        Middleware test = middlewareAPI -> (Function<Dispatch, Dispatch>) next -> new Dispatch() {
 
-    //TODO works with thunk middleware
+            @Override
+            public <T> T apply(Action action) {
+                calls.incrementAndGet();
+                return next.apply(action);
+            }
+        };
+        Store store = applyMiddleware(test, MiddlewareHelper::thunk) //
+                .apply(StoreCreator::createStore) //
+                .apply(Reducers::todos);
+        store.dispatch(addTodoAsync("Use Redux")).get();
+
+        assertEquals(2, calls.get());
+    }
+
+    @Test
+    public void worksWithThunkMiddleware() throws Exception {
+        Store store = applyMiddleware(MiddlewareHelper::thunk) //
+                .apply(StoreCreator::createStore) //
+                .apply(Reducers::todos);
+        store.dispatch(addTodoIfEmpty("Hello"));
+        assertEquals(State.of(Collections.singletonList(new Todo(1, "Hello"))), store.getState());
+
+        store.dispatch(addTodoIfEmpty("Hello"));
+        assertEquals(State.of(Collections.singletonList(new Todo(1, "Hello"))), store.getState());
+
+        store.dispatch(addTodo("World"));
+        assertEquals(State.of(Arrays.asList(new Todo(1, "Hello"), new Todo(2, "World"))), store.getState());
+
+        store.dispatch(addTodoAsync("Maybe")).get();
+        assertEquals(State.of(Arrays.asList(new Todo(1, "Hello"), new Todo(2, "World"), new Todo(3, "Maybe"))), store.getState());
+    }
 
     //TODO keeps unwrapped dispatch available while middleware is initializing
 

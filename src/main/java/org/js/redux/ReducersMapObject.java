@@ -13,9 +13,9 @@ public final class ReducersMapObject {
 
     private final Map<Enum<?>, Class<?>> types;
 
-    private final Map<Enum<?>, BiFunction> reducers;
+    private final Map<Enum<?>, BiFunction<Object, Action, Object>> reducers;
 
-    private ReducersMapObject(Map<Enum<?>, Class<?>> types, Map<Enum<?>, BiFunction> reducers) {
+    private ReducersMapObject(Map<Enum<?>, Class<?>> types, Map<Enum<?>, BiFunction<Object, Action, Object>> reducers) {
         this.types = types;
         this.reducers = reducers;
     }
@@ -24,7 +24,7 @@ public final class ReducersMapObject {
         return types;
     }
 
-    public Map<Enum<?>, BiFunction> getReducers() {
+    public Map<Enum<?>, BiFunction<Object, Action, Object>> getReducers() {
         return reducers;
     }
 
@@ -74,7 +74,7 @@ public final class ReducersMapObject {
 
         private final Map<Enum<?>, Class<?>> types = new HashMap<>();
 
-        private final Map<Enum<?>, BiFunction> reducers = new LinkedHashMap<>();
+        private final Map<Enum<?>, BiFunction<Object, Action, Object>> reducers = new LinkedHashMap<>();
 
         private Enum<?> key;
 

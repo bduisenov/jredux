@@ -36,6 +36,17 @@ public interface Store {
     Action dispatch(Action action);
 
     /**
+     * Typed stub for middleware.
+     *
+     * @param action
+     * @param <T>
+     * @return
+     */
+    default <T> T dispatch(ActionFunction<T> action) {
+        throw new UnsupportedOperationException("Action function must not reach store's #dispatch. It should be resolved to plain Action by middleware instead.");
+    }
+
+    /**
      * Reads the state tree managed by the store.
      *
      * @returns The current state tree of your application.

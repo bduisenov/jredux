@@ -15,7 +15,7 @@ import java.util.Optional;
  * {@link https://github.com/acdlite/flux-standard-action} standard.
  * 
  */
-public final class Action<T> {
+public class Action<T> {
 
     /**
      * The type of an action identifies to the consumer the nature of the action that has occurred.
@@ -42,7 +42,7 @@ public final class Action<T> {
      */
     public final boolean error;
 
-    private Action(Enum<?> type) {
+    Action(Enum<?> type) {
         this.type = type;
         this.payload = Optional.empty();
         this.error = false;
@@ -103,6 +103,10 @@ public final class Action<T> {
 
     @Override
     public String toString() {
-        return "Action{" + "payload=" + payload + ", type=" + type + '}';
+        return "Action{" +
+                "type=" + type +
+                ", payload=" + payload +
+                ", error=" + error +
+                '}';
     }
 }

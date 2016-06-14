@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Logger;
@@ -76,7 +77,7 @@ public class Redux {
             boolean hasChanged = false;
             int previousStateHashCode = state.hashCode();
             Map<Enum<?>, Object> nextStateMap = new LinkedHashMap<>();
-            for (Map.Entry<Enum<?>, BiFunction> entry : reducers.getReducers().entrySet()) {
+            for (Map.Entry<Enum<?>, BiFunction<Object, Action, Object>> entry : reducers.getReducers().entrySet()) {
                 Enum<?> key = entry.getKey();
                 BiFunction<Object, Action, Object> reducer = entry.getValue();
 
@@ -105,7 +106,7 @@ public class Redux {
 
     @Nullable
     private static String getUnexpectedStateShapeWarningMessage(State state,
-            Map<Enum<?>, BiFunction> reducers, Action action) {
+            Map<Enum<?>, BiFunction<Object, Action, Object>> reducers, Action action) {
         if (reducers.isEmpty()) {
             return unexpectedStateShapeWarningMessage;
         }
@@ -129,7 +130,7 @@ public class Redux {
     }
 
     @Nullable
-    private static RuntimeException assertReducerSanity(Map<Enum<?>, BiFunction> finalReducers) {
+    private static RuntimeException assertReducerSanity(Map<Enum<?>, BiFunction<Object, Action, Object>> finalReducers) {
         RuntimeException result = null;
         try {
             List<IllegalStateException> exceptions = new ArrayList<>();
@@ -161,7 +162,8 @@ public class Redux {
     public static GenericStoreEnhancer applyMiddleware(Middleware... middlewares) {
         return createStore -> (Function<Reducer, Store>) reducer -> {
             Store store = createStore.apply(reducer, null);
-            Dispatch dispatch = store::dispatch;
+
+            AtomicReference<Dispatch> dispatchHolder = new AtomicReference<>();
 
             MiddlewareAPI middlewareAPI = new MiddlewareAPI() {
 
@@ -170,23 +172,42 @@ public class Redux {
                 }
 
                 public Dispatch dispatch() {
-                    return action -> dispatch.apply(action);
+                    return dispatchHolder.get();
                 }
             };
 
             Function<Dispatch, Dispatch>[] chain = Arrays.asList(middlewares).stream() //
                     .map(middleware -> middleware.apply(middlewareAPI)) //
                     .collect(Collectors.toList()).toArray(new Function[]{});
-            Dispatch dispatchInternal = compose(chain).apply(store::dispatch);
+            Dispatch dispatchInternal = compose(chain).apply(new Dispatch() {
 
-            return new DelegatingStore(store) {
+                @Override
+                public Action apply(Action action) {
+                    return store.dispatch(action);
+                }
+            });
+
+            DelegatingStore delegatingStore = new DelegatingStore(store) {
 
                 @Override
                 public Action dispatch(Action action) {
                     return dispatchInternal.apply(action);
                 }
 
+                @Override
+                public <T> T dispatch(ActionFunction<T> action) {
+                    return dispatchInternal.apply(action);
+                }
+
             };
+            dispatchHolder.set(new Dispatch() {
+
+                @Override
+                public Action apply(Action action) {
+                    return delegatingStore.dispatch(action);
+                }
+            });
+            return delegatingStore;
         };
     }
 

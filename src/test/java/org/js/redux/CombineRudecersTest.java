@@ -9,6 +9,7 @@ import static org.js.redux.CombineRudecersTest.ReducerKeys.qux;
 import static org.js.redux.CombineRudecersTest.ReducerKeys.stack;
 import static org.js.redux.CombineRudecersTest.ReducerKeys.throwingReducer;
 import static org.js.redux.CombineRudecersTest.Type.FOO;
+import static org.js.redux.CombineRudecersTest.Type.decrement;
 import static org.js.redux.CombineRudecersTest.Type.increment;
 import static org.js.redux.CombineRudecersTest.Type.push;
 import static org.js.redux.CombineRudecersTest.Type.whatever;
@@ -66,16 +67,14 @@ public class CombineRudecersTest {
                 .add(counter).withInitialValue(0) //
                 .reducer((state, action) -> {
                     if (action != null && action.type != null) {
-                        switch (action.type.toString()) {
-                            case "increment":
-                                return state + 1;
-                            case "decrement":
-                                return state - 1;
-                            case "whatever":
-                                return null;
-                            default:
-                                return state;
+                        if (action.type == increment) {
+                            return state + 1;
+                        } else if (action.type == decrement) {
+                            return state - 1;
+                        } else if (action.type == whatever) {
+                            return null;
                         }
+                        return state;
                     }
                     return null;
                 }).build());

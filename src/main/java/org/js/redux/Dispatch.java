@@ -18,6 +18,6 @@ package org.js.redux;
 @FunctionalInterface
 public interface Dispatch {
 
-    Action apply(Action action);
+    <T> T apply(Action action);
 
 }
