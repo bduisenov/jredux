@@ -1,13 +1,11 @@
 package org.js.redux;
 
-import java.util.function.Function;
-
 /**
  * Created by bduisenov on 05/06/16.
  */
 @FunctionalInterface
-public interface GenericStoreEnhancer {
+public interface GenericStoreEnhancer extends StoreEnhancer {
 
-    Function<Reducer, Store> apply(StoreEnhancerStoreCreator next);
+    StoreEnhancerStoreCreator apply(StoreEnhancerStoreCreator next);
 
 }

@@ -166,8 +166,8 @@ public class Redux {
      * @return
      */
     public static GenericStoreEnhancer applyMiddleware(Middleware... middlewares) {
-        return createStore -> (Function<Reducer, Store>) reducer -> {
-            Store store = createStore.apply(reducer, null);
+        return createStore -> (StoreEnhancerStoreCreator) (reducer, preloadedState) -> {
+            Store store = createStore.apply(reducer, preloadedState);
 
             AtomicReference<Dispatch> dispatchHolder = new AtomicReference<>();
 
@@ -205,8 +205,6 @@ public class Redux {
             return delegatingStore;
         };
     }
-
-    /* compose */
 
     /**
      * Composes single-argument functions from right to left. The rightmost function can take

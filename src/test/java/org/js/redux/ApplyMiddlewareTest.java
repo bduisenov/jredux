@@ -1,6 +1,7 @@
 package org.js.redux;
 
 import static org.js.redux.Redux.applyMiddleware;
+import static org.js.redux.StoreCreator.createStore;
 import static org.js.redux.helpers.ActionCreators.addTodo;
 import static org.js.redux.helpers.ActionCreators.addTodoAsync;
 import static org.js.redux.helpers.ActionCreators.addTodoIfEmpty;
@@ -26,7 +27,7 @@ public class ApplyMiddlewareTest {
         Middleware test = middlewareAPI -> (Function<Dispatch, Dispatch>) next -> (Dispatch) next;
         Store store = applyMiddleware(test, MiddlewareHelper::thunk) //
                 .apply(StoreCreator::createStore) //
-                .apply(Reducers::todos);
+                .apply(Reducers::todos, null);
 
         store.dispatch(addTodo("Use Redux"));
         store.dispatch(addTodo("Flux FTW!"));
@@ -47,7 +48,7 @@ public class ApplyMiddlewareTest {
         };
         Store store = applyMiddleware(test, MiddlewareHelper::thunk) //
                 .apply(StoreCreator::createStore) //
-                .apply(Reducers::todos);
+                .apply(Reducers::todos, null);
         store.dispatch(addTodoAsync("Use Redux")).get();
 
         assertEquals(2, calls.get());
@@ -57,7 +58,7 @@ public class ApplyMiddlewareTest {
     public void worksWithThunkMiddleware() throws Exception {
         Store store = applyMiddleware(MiddlewareHelper::thunk) //
                 .apply(StoreCreator::createStore) //
-                .apply(Reducers::todos);
+                .apply(Reducers::todos, null);
         store.dispatch(addTodoIfEmpty("Hello"));
         assertEquals(State.of(Collections.singletonList(new Todo(1, "Hello"))), store.getState());
 
@@ -83,8 +84,8 @@ public class ApplyMiddlewareTest {
                 }
             };
         };
-        /*Store store = createStore(Reducers::todos, applyMiddleware(earlyDispatch));
-        assertEquals(State.of(Collections.singletonList(new Todo(1, "Hello"))), store.getState());*/
+        Store store = createStore(Reducers::todos, applyMiddleware(earlyDispatch));
+        assertEquals(State.of(Collections.singletonList(new Todo(1, "Hello"))), store.getState());
     }
 
 }
