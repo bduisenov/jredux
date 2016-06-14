@@ -372,7 +372,47 @@ public class CreateStoreTest {
 
     //TODO does not throw if action type is falsy
 
-    //TODO accepts enhancer as the third argument
+    @Test
+    public void acceptsEnhancerAsTheThirdArgument() {
+        AtomicBoolean called = new AtomicBoolean(false);
+        StoreEnhancer spyEnhancer = vanillaStore -> (reducer, preloadedState) -> {
+            Store store = vanillaStore.apply(reducer, preloadedState);
+            return new Store() {
+
+                @Override
+                public Action dispatch(Action action) {
+                    called.set(true);
+                    return store.dispatch(action);
+                }
+
+                @Override
+                public State getState() {
+                    return store.getState();
+                }
+
+                @Override
+                public Subscription subscribe(Listener listener) {
+                    return store.subscribe(listener);
+                }
+
+                @Override
+                public void replaceReducer(Reducer nextReducer) {
+                    store.replaceReducer(nextReducer);
+                }
+
+                @Override
+                public StoreCreator createStore() {
+                    return store.createStore();
+                }
+            };
+        };
+        Store store = createStore(Reducers::todos, State.empty(), spyEnhancer);
+        Action action = addTodo("Hello");
+        store.dispatch(action);
+
+        assertTrue(called.get());
+        assertEquals(State.of(Collections.singletonList(new Todo(1, "Hello"))), store.getState());
+    }
 
     //TODO accepts enhancer as the second argument if initial state is missing
 

@@ -25,7 +25,7 @@ public class StoreCreator {
      *            S State object type.
      */
     public static Store createStore(Reducer reducer) {
-        return createStore(reducer, (State) null);
+        return createStore(reducer, null, null);
     }
 
     /**
@@ -37,7 +37,7 @@ public class StoreCreator {
      *            S State object type.
      */
     public static Store createStore(Reducer reducer, StoreEnhancer enhancer) {
-        return null;
+        return createStore(reducer, null, enhancer);
     }
 
     /**
@@ -49,6 +49,22 @@ public class StoreCreator {
      *            S State object type.
      */
     public static Store createStore(Reducer reducer, State preloadedState) {
+        return createStore(reducer, preloadedState, null);
+    }
+
+    /**
+     * A store creator is a function that creates a Redux store. Like with dispatching function, we
+     * must distinguish the base store creator, `createStore(add, preloadedState)` exported from the
+     * Redux package, from store creators that are returned from the store enhancers.
+     *
+     * @param <S>
+     *            S State object type.
+     */
+    public static Store createStore(Reducer reducer, State preloadedState, StoreEnhancer enhancer) {
+        if (enhancer != null) {
+            return enhancer.apply(StoreCreator::createStore).apply(reducer, preloadedState);
+        }
+
         Store store = new Store() {
 
             private Reducer currentReducer = reducer;
@@ -121,18 +137,6 @@ public class StoreCreator {
         };
         store.dispatch(Action.of(Redux.ActionTypes.INIT));
         return store;
-    }
-
-    /**
-     * A store creator is a function that creates a Redux store. Like with dispatching function, we
-     * must distinguish the base store creator, `createStore(add, preloadedState)` exported from the
-     * Redux package, from store creators that are returned from the store enhancers.
-     *
-     * @param <S>
-     *            S State object type.
-     */
-    public static Store createStore(Reducer add, State preloadedState, StoreEnhancer enhancer) {
-        return null;
     }
 
 }
