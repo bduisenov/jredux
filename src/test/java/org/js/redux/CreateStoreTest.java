@@ -393,7 +393,26 @@ public class CreateStoreTest {
         assertEquals(State.of(Collections.singletonList(new Todo(1, "Hello"))), store.getState());
     }
 
-    //TODO accepts enhancer as the second argument if initial state is missing
+    @Test
+    public void acceptsEnhancerAsTheSecondArgumentIfInitialStateIsMissing() {
+        AtomicBoolean called = new AtomicBoolean(false);
+        StoreEnhancer spyEnhancer = vanillaStore -> (reducer, preloadedState) -> {
+            return new DelegatingStore(vanillaStore.apply(reducer, preloadedState)) {
+
+                @Override
+                public Action dispatch(Action action) {
+                    called.set(true);
+                    return store.dispatch(action);
+                }
+            };
+        };
+        Store store = createStore(Reducers::todos, spyEnhancer);
+        Action action = addTodo("Hello");
+        store.dispatch(action);
+
+        assertTrue(called.get());
+        assertEquals(State.of(Collections.singletonList(new Todo(1, "Hello"))), store.getState());
+    }
 
     //TODO throws if enhancer is neither undefined nor a function
 
