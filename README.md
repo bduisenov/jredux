@@ -29,6 +29,29 @@ JRedux is implementation of [Redux](https://github.com/reactjs/redux/) 3.5.x in 
     }
 ```
 
+###### more examples
+
+```java
+
+    {
+        Store store = applyMiddleware(this::thunk) //
+                .apply(StoreCreator::createStore) //
+                .apply(Reducers::todos, State.of(Collections.singletonList(new Todo(1, "Say"))));
+        store.subscribe(() -> System.out.println(store.getState()));
+
+        store.dispatch(addTodo("Hello"));
+        // State{{SINGLE_KEY=[Todo{id=1, text='Say'}, Todo{id=2, text='Hello'}]}}
+        
+        store.dispatch(addTodoIfEmpty("World"));
+
+        store.dispatch(addTodoAsync("Maybe")).thenRunAsync(() -> {
+            System.out.println(Thread.currentThread().getName());
+        });
+        // State{{SINGLE_KEY=[Todo{id=1, text='Say'}, Todo{id=2, text='Hello'}, Todo{id=3, text='Maybe'}]}}
+        // ForkJoinPool.commonPool-worker-1
+    }
+
+```
 
 ### Current status (test coverage)
   + applyMiddleware (**covered**)
