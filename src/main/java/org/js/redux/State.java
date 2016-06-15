@@ -68,8 +68,12 @@ public final class State {
     public <T> Optional<T> get(Enum<?> key, Class<T> type) {
         T result = null;
         Object value = state.get(key);
-        if (value != null && value.getClass().isAssignableFrom(type)) {
-            result = type.cast(value);
+        if (value != null) {
+            if (type != null && value.getClass().isAssignableFrom(type)) {
+                result = type.cast(value);
+            } else {
+                result = (T)value;
+            }
         } else {
             // handle type missmatch
         }

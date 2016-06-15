@@ -53,6 +53,40 @@ JRedux is implementation of [Redux](https://github.com/reactjs/redux/) 3.5.x in 
 
 ```
 
+```java
+
+    {
+        Reducer reducer = combineReducers(ReducersMapObject.builder() //
+                .add(ReducerKeys.foo) //
+                .reducer((Integer state, Action<Integer> action) -> {
+                    state = firstNonNull(state, 0);
+                    if (action.type == increment) {
+                        return state + action.payload.orElse(1);
+                    }
+                    return state;
+                }) //
+                .add(ReducerKeys.baz).withInitialValue("a") //
+                .reducer((state, action) -> {
+                    if (action.type == change) {
+                        return "b";
+                    }
+                    return state;
+                }) //
+                .build());
+        Store store = createStore(reducer);
+        store.subscribe(() -> System.out.println(store.getState()));
+
+        store.dispatch(Action.of(qux));
+        // State{{foo=0, baz=a}}
+        store.dispatch(Action.of(increment, 5));
+        // State{{foo=5, baz=a}}
+        store.dispatch(Action.of(qux));
+        // State{{foo=5, baz=a}}
+        store.dispatch(Action.of(change));
+        // State{{foo=5, baz=b}}
+    }
+```
+
 ### Current status (test coverage)
   + applyMiddleware (**covered**)
     + wraps dispatch method with middleware once (**covered**)
