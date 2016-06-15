@@ -14,7 +14,6 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
-import com.sun.istack.internal.Nullable;
 
 /**
  * Created by bduisenov on 05/06/16.
@@ -110,7 +109,6 @@ public class Redux {
         logger.warning(warningMessage);
     }
 
-    @Nullable
     private static String getUnexpectedStateShapeWarningMessage(State state,
             Map<Enum<?>, BiFunction<Object, Action, Object>> reducers, Action action) {
         if (reducers.isEmpty()) {
@@ -135,7 +133,6 @@ public class Redux {
         return String.format(undefinedStateErrorMessage, actionName, key);
     }
 
-    @Nullable
     private static RuntimeException assertReducerSanity(Map<Enum<?>, BiFunction<Object, Action, Object>> finalReducers) {
         RuntimeException result = null;
         try {

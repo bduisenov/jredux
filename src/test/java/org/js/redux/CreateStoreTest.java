@@ -436,6 +436,7 @@ public class CreateStoreTest {
 
         try {
             store.subscribe(null);
+            fail();
         } catch (NullPointerException e) {
             // success
         }
