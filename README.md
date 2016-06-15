@@ -1,6 +1,8 @@
 # JRedux
 JRedux is implementation of [Redux](https://github.com/reactjs/redux/) 3.5.x in java.
 
+[![Build Status](https://travis-ci.org/bduisenov/jredux.svg?branch=master)](https://travis-ci.org/bduisenov/jredux)
+
 ### The Gist
 ```java
     enum ActionType {
